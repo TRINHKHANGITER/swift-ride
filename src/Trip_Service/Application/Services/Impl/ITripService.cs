@@ -1,0 +1,22 @@
+using Trip_Service.Application.Contracts.Trip;
+using Trip_Service.Domain;
+
+namespace Trip_Service.Application.Services.Impl;
+
+public interface ITripService
+{
+    Task<Trip> GetTripByUuidAsync(
+        Guid tripUuid,
+        CancellationToken cancellationToken = default);
+
+    Task<Trip?> GetActiveTripByRiderAsync(Guid riderUuid, Guid? excludeTripUuid = null, CancellationToken cancellationToken = default);
+    Task<Trip?> GetActiveTripByDriverAsync(Guid driverUuid, Guid? excludeTripUuid = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Trip>> GetTripHistoryByRiderAsync(Guid riderUuid, CancellationToken cancellationToken = default);
+
+    Task<Trip> CreateTripAsync(
+        Guid riderUuid,
+        CreateTripRequest contract,
+        CancellationToken cancellationToken = default);
+
+    Task UpdateTripAsync(Trip trip, CancellationToken cancellationToken = default);
+}

@@ -1,0 +1,63 @@
+@TripService_HostAddress = http://localhost:5215
+@AccessToken = paste-token-here
+
+POST {{TripService_HostAddress}}/auth/register
+Content-Type: application/json
+
+{
+  "fullname": "Nguyen Van A",
+  "phone": "0901234567",
+  "password": "123456"
+}
+
+###
+
+POST {{TripService_HostAddress}}/auth/login
+Content-Type: application/json
+
+{
+  "phone": "0901234567",
+  "password": "123456"
+}
+
+###
+
+POST {{TripService_HostAddress}}/auth/register-driver
+Authorization: Bearer {{AccessToken}}
+Content-Type: application/json
+
+{
+  "licenseNumber": "GPLX-001",
+  "vehicleName": "Honda City",
+  "licensePlate": "30A-12345"
+}
+
+###
+
+GET {{TripService_HostAddress}}/auth/about-me
+Authorization: Bearer {{AccessToken}}
+Accept: application/json
+
+###
+
+POST {{TripService_HostAddress}}/auth/logout
+Authorization: Bearer {{AccessToken}}
+
+###
+
+POST {{TripService_HostAddress}}/trips
+Authorization: Bearer {{AccessToken}}
+Content-Type: application/json
+
+{
+  "pickup": {
+    "name": "Chợ Bến Thành",
+    "latitude": 10.7769,
+    "longitude": 106.7009
+  },
+  "destination": {
+    "name": "Sân bay Tân Sơn Nhất",
+    "latitude": 10.8231,
+    "longitude": 106.6297
+  }
+}

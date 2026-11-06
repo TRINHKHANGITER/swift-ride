@@ -1,0 +1,97 @@
+# ==============================
+# Frontend (Node.js / Next.js)
+# ==============================
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+.turbo/
+.vercel/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches/
+!.yarn/plugins/
+!.yarn/releases/
+!.yarn/versions/
+*.tsbuildinfo
+next-env.d.ts
+
+# Package manager logs and caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# ==============================
+# Backend (.NET)
+# ==============================
+bin/
+obj/
+artifacts/
+TestResults/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.nupkg
+*.snupkg
+*.pdb
+*.dll
+
+# JetBrains Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# Visual Studio / VS Code
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# ==============================
+# Environment variables / secrets
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.*.example
+appsettings.*.local.json
+secrets.json
+*.pem
+*.key
+*.pfx
+*.p12
+
+# ==============================
+# Logs, temporary files and OS files
+# ==============================
+logs/
+*.log
+*.tmp
+*.temp
+*.cache
+.cache/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo
+
+# Local databases
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3

@@ -1,0 +1,92 @@
+const now = new Date()
+
+const drivers = [
+  {
+    // Nguyễn Văn An
+    driverUuid: UUID("7f9c2b1e-4a63-4d85-9b27-6e1f3c8a5d42"),
+    location: {
+      type: "Point",
+      coordinates: [106.690500, 10.775400]
+    },
+    isOnline: true,
+    isAvailable: true,
+    updatedAt: now
+  },
+  {
+    // Trần Minh Hoàng
+    driverUuid: UUID("c3a8f6d2-91b4-47e0-a56c-2d9f8b7e1345"),
+    location: {
+      type: "Point",
+      coordinates: [106.688900, 10.773800]
+    },
+    isOnline: true,
+    isAvailable: true,
+    updatedAt: now
+  },
+  {
+    // Lê Quốc Bảo
+    driverUuid: UUID("1e6b9c74-5d32-48af-b103-7c2e9a6f4d81"),
+    location: {
+      type: "Point",
+      coordinates: [106.693000, 10.778000]
+    },
+    isOnline: true,
+    isAvailable: true,
+    updatedAt: now
+  },
+  {
+    // Phạm Đức Huy
+    driverUuid: UUID("a52d7e19-c684-4f3b-8a20-9d1c5e7b436f"),
+    location: {
+      type: "Point",
+      coordinates: [106.685000, 10.770000]
+    },
+    isOnline: false,
+    isAvailable: true,
+    updatedAt: now
+  },
+  {
+    // Võ Thành Đạt
+    driverUuid: UUID("e8b41d63-2f95-4ac7-b682-3e0d9f1a754c"),
+    location: {
+      type: "Point",
+      coordinates: [106.681500, 10.767500]
+    },
+    isOnline: true,
+    isAvailable: false,
+    updatedAt: now
+  },
+  {
+    // Đỗ Anh Tuấn
+    driverUuid: UUID("4d7a2c98-e153-46b0-97af-8c5e1d3b6294"),
+    location: {
+      type: "Point",
+      coordinates: [106.675000, 10.760000]
+    },
+    isOnline: true,
+    isAvailable: true,
+    updatedAt: now
+  }
+]
+
+drivers.forEach(driver => {
+  db.driver_locations.updateOne(
+    {
+      driverUuid: driver.driverUuid
+    },
+    {
+      $set: {
+        location: driver.location,
+        isOnline: driver.isOnline,
+        isAvailable: driver.isAvailable,
+        updatedAt: driver.updatedAt
+      },
+      $setOnInsert: {
+        driverUuid: driver.driverUuid
+      }
+    },
+    {
+      upsert: true
+    }
+  )
+})

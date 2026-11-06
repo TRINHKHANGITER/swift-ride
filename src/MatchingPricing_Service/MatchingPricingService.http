@@ -1,0 +1,38 @@
+@MatchingPricingService_HostAddress = http://localhost:6666
+
+POST {{MatchingPricingService_HostAddress}}/quote
+Content-Type: application/json
+
+{
+  "locations": [
+    {
+      "latitude": 10.7793043,
+      "longitude": 106.6842107
+    },
+    {
+      "latitude": 10.759703,
+      "longitude": 106.68176
+    }
+  ]
+}
+
+###
+
+POST {{MatchingPricingService_HostAddress}}/matching
+Content-Type: application/json
+
+{
+  "tripUuid": "4a32c87e-dada-4e40-a918-e2e5930af087",
+  "pickup": {
+    "latitude": 10.7769,
+    "longitude": 106.7009
+  },
+  "excludeDriverUuids": []
+}
+
+###
+
+GET {{MatchingPricingService_HostAddress}}/openapi/v1.json
+Accept: application/json
+
+###
