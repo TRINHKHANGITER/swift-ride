@@ -68,6 +68,7 @@ builder.Services.AddHttpClient<IOSRMService, OSRMService>(client =>
     client.DefaultRequestHeaders.UserAgent.ParseAdd("SwiftRide/1.0");
 });
 
+
 var app = builder.Build();
 
 app.UseExceptionHandler();

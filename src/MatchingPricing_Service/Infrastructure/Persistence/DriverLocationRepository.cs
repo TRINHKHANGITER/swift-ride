@@ -85,4 +85,17 @@ public sealed class DriverLocationRepository : IDriverLocationRepository
 
         return await this._collection.Find(filter).Limit(1).FirstOrDefaultAsync(cancellationToken);
     }
+    
+    public async Task SetOnlineStatusAsync(Guid driverUuid, bool isOnline, CancellationToken cancellationToken)
+    {
+        var result = await _collection.UpdateOneAsync(
+            driver => driver.DriverUuid == driverUuid,
+            Builders<DriverLocation>.Update
+                .Set(driver => driver.IsOnline, isOnline)
+                .Set(driver => driver.UpdatedAt, DateTime.Now),
+                cancellationToken: cancellationToken
+        );
+
+        if (result.MatchedCount == 0) throw new KeyNotFoundException("Không tìm thấy thông tin tài xế");
+    }
 }

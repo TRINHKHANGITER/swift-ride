@@ -52,14 +52,16 @@ builder.Services.AddHttpClient<IMatchingPricingService, MatchingPricingService>(
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddSingleton<IDriverNotificationService, DriverNotificationService>();
+builder.Services.AddSingleton<ISendNotificateService, SendNotificateService>();
 // Application service
 builder.Services.AddScoped<ITripService, TripService>();
+builder.Services.AddScoped<ITripMatchingService, TripMatchingService>();
 
 // Application Repository
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 builder.Services.AddScoped<ITripRepository, TripRepository>();
+builder.Services.AddScoped<ITripDriverRejectionRepository, TripDriverRejectionRepository>();
 
 
 var app = builder.Build();

@@ -6,12 +6,19 @@ public enum TripStatus
 {
     Requested,
     DriverAccepted,
+    // Tài xế đến điểm đón
     EnRoute,
+    // Khách lên xe rồi
     PickedUp,
+    // Chở khách tới
     DroppedOff,
+    // Chờ khách trả tiền 
     PaymentPending,
+    // Đã trả
     Paid,
+    // Hủy khi khách hoặc tài xế hủy chuyến
     Cancelled,
+    // Thất bại khi không tài xế nào nhận cuốc (chưa tới bước DriverAccepted)
     Failed
 }
 

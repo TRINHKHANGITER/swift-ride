@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     },
   },
   // allowedDevOrigins: ["192.168.1.90", "livable-elsewhere-elyse.ngrok-free.dev"],
+  reactStrictMode: false,
 };
 
 export default nextConfig;

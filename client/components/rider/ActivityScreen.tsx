@@ -24,6 +24,10 @@ const statusView = (status: string) => {
   return { label: "Không tìm được tài xế", className: "text-[#a34b35]", Icon: AlertCircle };
 };
 
+/**
+ * * Trip history page
+ * @returns 
+ */
 export function ActivityScreen() {
   const router = useRouter();
   const [trips, setTrips] = useState<TripHistoryContract[]>([]);

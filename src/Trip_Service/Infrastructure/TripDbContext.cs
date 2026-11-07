@@ -10,6 +10,7 @@ public class TripDbContext : DbContext
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<DriverProfile> DriverProfiles => Set<DriverProfile>();
     public DbSet<Trip> Trips => Set<Trip>();
+    public DbSet<TripDriverRejection> TripDriverRejections => Set<TripDriverRejection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +45,20 @@ public class TripDbContext : DbContext
             entity.Property(trip => trip.DistanceKM).HasPrecision(10, 2);
             entity.Property(trip => trip.DurationMin).HasPrecision(10, 2);
             entity.Property(trip => trip.Price).HasPrecision(18, 0);
+        });
+
+        modelBuilder.Entity<TripDriverRejection>(entity =>
+        {
+            entity.HasIndex(rejection => new { rejection.TripUuid, rejection.DriverUuid })
+                .IsUnique();
+            entity.HasOne<Trip>()
+                .WithMany()
+                .HasForeignKey(rejection => rejection.TripUuid)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<DriverProfile>()
+                .WithMany()
+                .HasForeignKey(rejection => rejection.DriverUuid)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -248,6 +248,46 @@ namespace Trip_Service.Migrations
 
                     b.ToTable("Trips");
                 });
+
+            modelBuilder.Entity("Trip_Service.Domain.TripDriverRejection", b =>
+                {
+                    b.Property<Guid>("Uuid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DriverUuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("TripUuid")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Uuid");
+
+                    b.HasIndex("DriverUuid");
+
+                    b.HasIndex("TripUuid", "DriverUuid")
+                        .IsUnique();
+
+                    b.ToTable("TripDriverRejections");
+                });
+
+            modelBuilder.Entity("Trip_Service.Domain.TripDriverRejection", b =>
+                {
+                    b.HasOne("Trip_Service.Domain.DriverProfile", null)
+                        .WithMany()
+                        .HasForeignKey("DriverUuid")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Trip_Service.Domain.Trip", null)
+                        .WithMany()
+                        .HasForeignKey("TripUuid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }

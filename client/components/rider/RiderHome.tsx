@@ -14,12 +14,12 @@ import { SwiftRideLogo } from "@/components/brand/SwiftRideLogo";
 import { AuthSheet } from "@/components/rider/AuthSheet";
 import { BottomNavigation } from "@/components/rider/BottomNavigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { tripService } from "@/service/TripService";
 
 const recentPlaces = ["488/9 Cộng Hòa", "Sân bay Tân Sơn Nhất", "Ga Sài Gòn"];
 
 export function RiderHome() {
   const router = useRouter();
+
   const [authOpen, setAuthOpen] = useState(false);
   const { status, user } = useAuth();
   const isSignedIn = status === "authenticated";
@@ -34,16 +34,9 @@ export function RiderHome() {
     return <main className="mx-auto min-h-dvh w-full max-w-140 bg-white" />;
   }
 
-  async function openBooking() {
+  function openBooking() {
     if (isSignedIn) {
-      try {
-        await tripService.getActiveTrip();
-        router.push("/search");
-
-        // router.push(activeTrip ? `/trip/${activeTrip.uuid}` : "/search");
-      } catch {
-        router.push("/search");
-      }
+      router.push("/search");
       return;
     }
     setAuthOpen(true);

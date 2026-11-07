@@ -2,9 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bike, Clock3, House, LoaderCircle, MapPin, Phone, Route, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  Bike,
+  Clock3,
+  House,
+  LoaderCircle,
+  MapPin,
+  Phone,
+  Route,
+  UserRound,
+  X,
+} from "lucide-react";
 import { AuthenticatedScreen } from "@/components/rider/AuthenticatedScreen";
 import ViewMapLine from "@/components/map/ViewMapLine";
+import { Button } from "@/components/ui/button";
 import { tripService } from "@/service/TripService";
 import type { TripContract } from "@/service/contract/TripContract";
 import { tripStatusName } from "@/service/trip-status";
@@ -21,6 +33,7 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
   const router = useRouter();
   const [trip, setTrip] = useState<TripContract | null>(null);
   const [error, setError] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
   const { tripRoute, driverRoute } = useTripRoutes(trip);
 
   const loadTrip = useCallback(async () => {
@@ -51,6 +64,22 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
     Failed: ["Chưa tìm được tài xế", "Vui lòng quay lại và đặt một chuyến mới."],
     Cancelled: ["Chuyến đi đã hủy", "Chuyến đi này không còn hoạt động."],
   }[status] ?? ["Đang cập nhật chuyến đi", "Thông tin mới nhất sẽ tự động hiển thị tại đây."];
+
+  const cancelTrip = async () => {
+    if (!trip || status !== "Requested" || isCancelling) return;
+    if (!window.confirm("Bạn có chắc muốn hủy chuyến đi này?")) return;
+
+    setIsCancelling(true);
+    setError("");
+    try {
+      setTrip(await tripService.cancelTrip(trip.uuid));
+    } catch {
+      await loadTrip();
+      setError("Không thể hủy chuyến đi. Vui lòng thử lại.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
     <AuthenticatedScreen>
@@ -87,6 +116,15 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
               </div>
             </section>
 
+            {error && (
+              <p
+                role="alert"
+                className="mx-5 rounded-xl bg-[#fff0ec] px-4 py-3 text-sm text-[#9a422d]"
+              >
+                {error}
+              </p>
+            )}
+
             <section className="overflow-hidden bg-white">
               <ViewMapLine
                 pickup={{ name: trip.pickupName, latitude: trip.pickupLatitude, longitude: trip.pickupLongitude }}
@@ -122,6 +160,38 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
                 <div><p className="font-bold text-[#17211e]">{formatPrice(trip.price)}</p><p className="text-xs text-[#71807a]">Giá dự kiến</p></div>
               </div>
             </section>
+
+            {status === "Requested" && (
+              <section className="bg-white px-5 py-5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isCancelling}
+                  onClick={() => void cancelTrip()}
+                  className="h-12 w-full rounded-xl border-[#d26a50] text-[#a34b35] hover:bg-[#fff0ec] hover:text-[#8f3f2c]"
+                >
+                  {isCancelling ? (
+                    <LoaderCircle className="size-5 animate-spin" />
+                  ) : (
+                    <X className="size-5" />
+                  )}
+                  Hủy chuyến
+                </Button>
+              </section>
+            )}
+
+            {status === "Failed" && (
+              <section className="bg-white px-5 py-5">
+                <Button
+                  type="button"
+                  onClick={() => router.replace("/search")}
+                  className="h-12 w-full rounded-xl bg-[#126b4f] hover:bg-[#0e5942]"
+                >
+                  <ArrowLeft className="size-5" />
+                  Quay lại màn hình tìm kiếm
+                </Button>
+              </section>
+            )}
           </div>
         )}
       </main>

@@ -6,7 +6,7 @@ namespace Trip_Service.Application.Contracts;
 public sealed record QuoteRequestContract(LocationContract Pickup, LocationContract Destination);
 public sealed record QuoteResponseContract(decimal Price, OSRMRouteContract Route, double DistanceKM, double DurationMin);
 
-public sealed record MatchingRequestContract(Guid TripUuid, LocationContract Pickup, IReadOnlyCollection<Guid> ExcludedDriverIds);
+public sealed record MatchingRequestContract(Guid TripUuid, LocationContract Pickup, IReadOnlyCollection<Guid> ExcludeDriverUuids);
 public sealed record MatchingResponseContract(Guid TripUuid, Guid? DriverUuid, bool IsSuccess);
 public sealed record DriverLocationContract(Guid DriverUuid, double Latitude, double Longitude, bool IsOnline, bool IsAvailable, DateTime UpdatedAt);
 public sealed record UpdateDriverLocationContract(double Latitude, double Longitude);

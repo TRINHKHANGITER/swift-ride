@@ -15,8 +15,9 @@ namespace Trip_Service.Api;
 [Route("trips")]
 public sealed class TripController(
     ITripService tripService,
+    ITripMatchingService tripMatchingService,
     IMatchingPricingService matchingPricingClient,
-    IDriverNotificationService driverNotificationService,
+    ISendNotificateService sendNotificateService,
     IAuthService authService,
     IAccountRepository accountRepository,
     IDriverRepository driverRepository) : ControllerBase
@@ -48,11 +49,13 @@ public sealed class TripController(
         }));
     }
 
+    // ! [Rider] - Get active trip
     [Authorize]
     [HttpGet("active")]
     public async Task<ActionResult<TripDetailsResponse?>> GetActiveTripAsync(CancellationToken cancellationToken)
     {
         var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
+        // Check profile, driver will get a profile, rider isn't
         var trip = session.Profile is null
             ? await tripService.GetActiveTripByRiderAsync(session.Account.Uuid, cancellationToken: cancellationToken)
             : await tripService.GetActiveTripByDriverAsync(session.Profile.DriverUuid, cancellationToken: cancellationToken);
@@ -60,6 +63,7 @@ public sealed class TripController(
         return trip is null ? NoContent() : Ok(await MapDetailsAsync(trip, cancellationToken));
     }
 
+    // ! Get trip detail
     [Authorize]
     [HttpGet("{tripUuid:guid}")]
     public async Task<ActionResult<TripDetailsResponse>> GetTripAsync(
@@ -109,7 +113,7 @@ public sealed class TripController(
         return StatusCode(StatusCodes.Status201Created, MapResponse(trip, quote.Route.Geometry));
     }
 
-    // ! [Driver] - Confirm
+    // ! [Rider] - Confirm after checking price, distance and time
     [Authorize]
     [HttpPost("{tripUuid:guid}/confirm")]
     public async Task<ActionResult<MatchingResponseContract>> ConfirmTripAsync(
@@ -133,68 +137,37 @@ public sealed class TripController(
             throw new InvalidOperationException("Bạn đang có một chuyến đi khác chưa hoàn thành.");
         }
 
-        var excludedDrivers = new List<Guid>();
-        MatchingResponseContract? match = null;
-        for (var attempt = 0; attempt < 10; attempt++)
-        {
-            match = await matchingPricingClient.ProcessMatchAsync(
-                new MatchingRequestContract(
-                    trip.Uuid,
-                    new LocationContract(trip.PickupLatitude, trip.PickupLongitude),
-                    excludedDrivers),
-                cancellationToken);
-
-            if (!match.IsSuccess || match.DriverUuid is null) break;
-            if (await tripService.GetActiveTripByDriverAsync(match.DriverUuid.Value, cancellationToken: cancellationToken) is null) break;
-            excludedDrivers.Add(match.DriverUuid.Value);
-        }
-
-        if (match is null || !match.IsSuccess || match.DriverUuid is null)
-        {
-            trip.Status = TripStatus.Failed;
-            await tripService.UpdateTripAsync(trip, cancellationToken);
-
-            throw new InvalidOperationException("Các tài xế hiện đang bận, vui lòng đặt lại xe sau 5 phút.");
-        }
-
-        trip.DriverUuid = match.DriverUuid.Value;
-        await tripService.UpdateTripAsync(trip, cancellationToken);
-
-        var notificationSent = driverNotificationService.Notify(match.DriverUuid.Value, trip);
-        if (!notificationSent)
-        {
-            trip.DriverUuid = null;
-            await tripService.UpdateTripAsync(trip, cancellationToken);
-            throw new InvalidOperationException("Không thể gửi yêu cầu chuyến đi đến tài xế.");
-        }
-
+        var match = await tripMatchingService.FindAndNotifyNextDriverAsync(trip, cancellationToken);
         return Ok(match);
     }
 
-    // ! [Driver] - Accept trip
+    // ! [Rider] - Cancel a trip while waiting for a driver
     [Authorize]
-    [HttpPost("{tripUuid:guid}/accept")]
-    public async Task<ActionResult<Trip>> AcceptTripAsync(
+    [HttpPost("{tripUuid:guid}/cancel")]
+    public async Task<ActionResult<TripDetailsResponse>> CancelTripAsync(
         [FromRoute] Guid tripUuid,
         CancellationToken cancellationToken)
     {
-        var trip = await GetAssignedDriverTripAsync(tripUuid, cancellationToken);
+        var trip = await tripService.GetTripByUuidAsync(tripUuid, cancellationToken);
+        if (trip.RiderUuid != GetAccountUuid())
+        {
+            return Forbid();
+        }
+
         if (trip.Status != TripStatus.Requested)
         {
-            throw new InvalidOperationException("Chuyến đi không còn chờ tài xế xác nhận.");
+            throw new InvalidOperationException("Chỉ có thể hủy chuyến đi đang chờ tài xế.");
         }
 
-        if (await tripService.GetActiveTripByDriverAsync(trip.DriverUuid!.Value, trip.Uuid, cancellationToken) is not null)
-        {
-            throw new InvalidOperationException("Bạn đang có một chuyến đi khác chưa hoàn thành.");
-        }
-
-        trip.Status = TripStatus.DriverAccepted;
+        trip.Status = TripStatus.Cancelled;
+        trip.DriverUuid = null;
         await tripService.UpdateTripAsync(trip, cancellationToken);
-        await matchingPricingClient.SetDriverAvailabilityAsync(trip.DriverUuid!.Value, false, cancellationToken);
-        return Ok(trip);
+        sendNotificateService.RemovePendingOffer(trip.Uuid);
+
+        return Ok(await MapDetailsAsync(trip, cancellationToken));
     }
 
+    // ! [Driver] - Update Driver Location
     [Authorize]
     [HttpPost("{tripUuid:guid}/driver-location")]
     public async Task<ActionResult<TripDetailsResponse>> UpdateDriverLocationAsync(
@@ -217,71 +190,13 @@ public sealed class TripController(
         var location = await matchingPricingClient.UpdateDriverLocationAsync(
             trip.DriverUuid!.Value,
             new UpdateDriverLocationContract(request.Latitude, request.Longitude),
-            cancellationToken);
+            cancellationToken
+        );
+
         if (trip.Status == TripStatus.DriverAccepted) trip.Status = TripStatus.EnRoute;
         await tripService.UpdateTripAsync(trip, cancellationToken);
+
         return Ok(await MapDetailsAsync(trip, cancellationToken, location));
-    }
-
-    [Authorize]
-    [HttpPost("{tripUuid:guid}/pickup")]
-    public async Task<ActionResult<TripDetailsResponse>> PickupTripAsync(
-        [FromRoute] Guid tripUuid,
-        CancellationToken cancellationToken)
-    {
-        var trip = await GetAssignedDriverTripAsync(tripUuid, cancellationToken);
-        if (trip.Status is not (TripStatus.DriverAccepted or TripStatus.EnRoute))
-        {
-            throw new InvalidOperationException("Chuyến đi chưa sẵn sàng đón khách.");
-        }
-
-        trip.Status = TripStatus.PickedUp;
-        var location = await matchingPricingClient.UpdateDriverLocationAsync(
-            trip.DriverUuid!.Value,
-            new UpdateDriverLocationContract(trip.PickupLatitude, trip.PickupLongitude),
-            cancellationToken);
-        await tripService.UpdateTripAsync(trip, cancellationToken);
-        return Ok(await MapDetailsAsync(trip, cancellationToken, location));
-    }
-
-    [Authorize]
-    [HttpPost("{tripUuid:guid}/dropoff")]
-    public async Task<ActionResult<TripDetailsResponse>> DropoffTripAsync(
-        [FromRoute] Guid tripUuid,
-        CancellationToken cancellationToken)
-    {
-        var trip = await GetAssignedDriverTripAsync(tripUuid, cancellationToken);
-        if (trip.Status != TripStatus.PickedUp)
-        {
-            throw new InvalidOperationException("Cần đón khách trước khi kết thúc chuyến.");
-        }
-
-        trip.Status = TripStatus.DroppedOff;
-        var location = await matchingPricingClient.UpdateDriverLocationAsync(
-            trip.DriverUuid!.Value,
-            new UpdateDriverLocationContract(trip.DestinationLatitude, trip.DestinationLongitude),
-            cancellationToken);
-        await matchingPricingClient.SetDriverAvailabilityAsync(trip.DriverUuid.Value, true, cancellationToken);
-        await tripService.UpdateTripAsync(trip, cancellationToken);
-        return Ok(await MapDetailsAsync(trip, cancellationToken, location));
-    }
-
-    [Authorize]
-    [HttpPost("{tripUuid:guid}/reject")]
-    public async Task<ActionResult<Trip>> RejectTripAsync(
-        [FromRoute] Guid tripUuid,
-        CancellationToken cancellationToken)
-    {
-        var trip = await GetAssignedDriverTripAsync(tripUuid, cancellationToken);
-        if (trip.Status != TripStatus.Requested)
-        {
-            throw new InvalidOperationException("Chuyến đi không còn chờ tài xế xác nhận.");
-        }
-
-        trip.Status = TripStatus.Failed;
-        trip.DriverUuid = null;
-        await tripService.UpdateTripAsync(trip, cancellationToken);
-        return Ok(trip);
     }
 
     private async Task<Trip> GetAssignedDriverTripAsync(

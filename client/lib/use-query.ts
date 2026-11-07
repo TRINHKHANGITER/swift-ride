@@ -30,6 +30,7 @@ export const useQuery = () => {
             options?.onSucess?.();
         } catch (error: unknown) {
             console.log("Catch error in useQuery: ", error);
+
             let code = 0;
             let message = null;
             // Axios error
