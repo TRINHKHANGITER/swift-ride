@@ -1,15 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Bike,
   Clock3,
+  CircleCheck,
   House,
   LoaderCircle,
   MapPin,
   Phone,
+  QrCode,
   Route,
   UserRound,
   X,
@@ -29,11 +32,24 @@ const formatPrice = (price: number | null) =>
     maximumFractionDigits: 0,
   }).format(price ?? 0);
 
+const statusContents: Record<string, readonly [string, string]> = {
+  Requested: ["Đang chờ tài xế xác nhận", "Yêu cầu đã được gửi tới tài xế. Vui lòng chờ trong giây lát."],
+  DriverAccepted: ["Tài xế đã nhận chuyến", "Tài xế đang chuẩn bị đến điểm đón của bạn."],
+  EnRoute: ["Tài xế đang đến", "Tài xế đang di chuyển tới điểm đón."],
+  PickedUp: ["Chuyến đi đang diễn ra", "Chúc bạn có một chuyến đi an toàn."],
+  DroppedOff: ["Đã đến nơi", "Chuyến đi đã hoàn thành và hệ thống đang tạo thông tin thanh toán."],
+  PaymentPending: ["Đang chờ thanh toán", "Quét mã QR bên dưới để thanh toán chuyến đi."],
+  Paid: ["Thanh toán thành công", "Cảm ơn bạn đã sử dụng Swift Ride."],
+  Failed: ["Chưa tìm được tài xế", "Vui lòng quay lại và đặt một chuyến mới."],
+  Cancelled: ["Chuyến đi đã hủy", "Chuyến đi này không còn hoạt động."],
+};
+
 export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
   const router = useRouter();
   const [trip, setTrip] = useState<TripContract | null>(null);
   const [error, setError] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+  const previousStatusRef = useRef<string | null>(null);
   const { tripRoute, driverRoute } = useTripRoutes(trip);
 
   const loadTrip = useCallback(async () => {
@@ -45,25 +61,33 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
     }
   }, [tripUuid]);
 
+  const status = trip ? tripStatusName(trip.status) : "";
+  const isTerminalStatus = status === "Paid" || status === "Cancelled" || status === "Failed";
+
   useEffect(() => {
+    if (isTerminalStatus) return;
+
     const initialLoad = window.setTimeout(() => void loadTrip(), 0);
     const interval = window.setInterval(() => void loadTrip(), 3_000);
     return () => {
       window.clearTimeout(initialLoad);
       window.clearInterval(interval);
     };
-  }, [loadTrip]);
+  }, [isTerminalStatus, loadTrip]);
 
-  const status = trip ? tripStatusName(trip.status) : "";
-  const statusContent = {
-    Requested: ["Đang chờ tài xế xác nhận", "Yêu cầu đã được gửi tới tài xế. Vui lòng chờ trong giây lát."],
-    DriverAccepted: ["Tài xế đã nhận chuyến", "Tài xế đang chuẩn bị đến điểm đón của bạn."],
-    EnRoute: ["Tài xế đang đến", "Tài xế đang di chuyển tới điểm đón."],
-    PickedUp: ["Chuyến đi đang diễn ra", "Chúc bạn có một chuyến đi an toàn."],
-    DroppedOff: ["Đã đến nơi", "Chuyến đi đã hoàn thành. Cảm ơn bạn đã sử dụng Swift Ride."],
-    Failed: ["Chưa tìm được tài xế", "Vui lòng quay lại và đặt một chuyến mới."],
-    Cancelled: ["Chuyến đi đã hủy", "Chuyến đi này không còn hoạt động."],
-  }[status] ?? ["Đang cập nhật chuyến đi", "Thông tin mới nhất sẽ tự động hiển thị tại đây."];
+  const statusContent = statusContents[status] ?? ["Đang cập nhật chuyến đi", "Thông tin mới nhất sẽ tự động hiển thị tại đây."];
+
+  useEffect(() => {
+    if (!status) return;
+
+    const previousStatus = previousStatusRef.current;
+    if (previousStatus && previousStatus !== status) {
+      const statusTitle = statusContents[status]?.[0] ?? "Trạng thái chuyến đi đã thay đổi";
+      window.alert(`Cập nhật chuyến đi: ${statusTitle}`);
+    }
+
+    previousStatusRef.current = status;
+  }, [status]);
 
   const cancelTrip = async () => {
     if (!trip || status !== "Requested" || isCancelling) return;
@@ -160,6 +184,38 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
                 <div><p className="font-bold text-[#17211e]">{formatPrice(trip.price)}</p><p className="text-xs text-[#71807a]">Giá dự kiến</p></div>
               </div>
             </section>
+
+            {trip.qrUrl && status === "PaymentPending" && (
+              <section className="bg-white px-5 py-6 text-center" aria-live="polite">
+                <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#e8f3ef] text-[#126b4f]">
+                  <QrCode className="size-6" />
+                </span>
+                <h2 className="mt-3 text-lg font-bold text-[#17211e]">Thanh toán chuyến đi</h2>
+                <p className="mt-1 text-sm text-[#71807a]">Quét mã QR bằng ứng dụng ngân hàng để thanh toán {formatPrice(trip.price)}.</p>
+                <div className="mx-auto mt-5 w-fit overflow-hidden rounded-2xl border border-[#dce5e1] bg-white p-3 shadow-sm">
+                  <Image
+                    src={trip.qrUrl}
+                    alt="Mã QR thanh toán chuyến đi"
+                    width={280}
+                    height={280}
+                    className="size-70 object-contain"
+                  />
+                </div>
+                <a href={trip.qrUrl} target="_blank" rel="noreferrer" className="mt-4 inline-block text-sm font-semibold text-[#126b4f] underline underline-offset-4">
+                  Mở mã QR trong tab mới
+                </a>
+              </section>
+            )}
+
+            {status === "Paid" && (
+              <section className="bg-white px-5 py-6 text-center" aria-live="polite">
+                <span className="mx-auto grid size-12 place-items-center rounded-full bg-[#e8f3ef] text-[#126b4f]">
+                  <CircleCheck className="size-7" />
+                </span>
+                <h2 className="mt-3 text-lg font-bold text-[#17211e]">Đã thanh toán</h2>
+                <p className="mt-1 text-sm text-[#71807a]">Khoản thanh toán {formatPrice(trip.price)} đã được xác nhận.</p>
+              </section>
+            )}
 
             {status === "Requested" && (
               <section className="bg-white px-5 py-5">

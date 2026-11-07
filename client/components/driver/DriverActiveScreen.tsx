@@ -14,8 +14,33 @@ export function DriverActiveScreen() {
   const [trip, setTrip] = useState<TripContract | null>(null);
 
   useEffect(() => {
-    tripService.getActiveTrip().then(setTrip).catch(() => setTrip(null));
-  }, []);
+    let active = true;
+
+    const loadActiveTrip = async () => {
+      try {
+        const result = await tripService.getActiveTrip();
+        if (!active) return;
+
+        if (!result) {
+          window.localStorage.removeItem("swift-ride-active-trip");
+          router.replace("/driver");
+          return;
+        }
+
+        setTrip(result);
+      } catch {
+        // Giữ nguyên màn hình khi mất kết nối để tránh điều hướng sai.
+      }
+    };
+
+    void loadActiveTrip();
+    const interval = window.setInterval(() => void loadActiveTrip(), 3_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [router]);
 
   const status = trip ? tripStatusName(trip.status) : "";
   const statusLabel = status === "PickedUp" ? "Đang chở khách" : status === "EnRoute" ? "Đang tới điểm đón" : "Đã nhận chuyến";

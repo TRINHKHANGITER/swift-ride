@@ -12,6 +12,7 @@ public interface ITripService
     Task<Trip?> GetActiveTripByRiderAsync(Guid riderUuid, Guid? excludeTripUuid = null, CancellationToken cancellationToken = default);
     Task<Trip?> GetActiveTripByDriverAsync(Guid driverUuid, Guid? excludeTripUuid = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Trip>> GetTripHistoryByRiderAsync(Guid riderUuid, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Trip>> GetTripHistoryByDriverAsync(Guid driverUuid, CancellationToken cancellationToken = default);
 
     Task<Trip> CreateTripAsync(
         Guid riderUuid,

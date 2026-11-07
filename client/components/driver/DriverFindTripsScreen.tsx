@@ -14,6 +14,7 @@ import {
 import { useAuth } from "@/components/auth/AuthProvider";
 import { DriverBottomNavigation } from "@/components/driver/DriverBottomNavigation";
 import { DriverOnlyScreen } from "@/components/driver/DriverOnlyScreen";
+import DriverLocationMap from "@/components/map/DriverLocationMap";
 import { Button } from "@/components/ui/button";
 import { API_BASE_URL } from "@/lib/http-client";
 import { tripService } from "@/service/TripService";
@@ -227,6 +228,19 @@ export function DriverFindTripsScreen() {
               />
             </button>
           </div>
+        </section>
+
+        <section className="mt-3 overflow-hidden bg-white" aria-label="Vị trí tài xế">
+          {driverLocation ? (
+            <DriverLocationMap
+              latitude={driverLocation.latitude}
+              longitude={driverLocation.longitude}
+            />
+          ) : (
+            <div className="grid h-72 place-items-center bg-[#eef2f0]">
+              <LoaderCircle className="size-8 animate-spin text-[#126b4f]" aria-label="Đang tải bản đồ" />
+            </div>
+          )}
         </section>
 
         {!profile?.isVerified && (

@@ -39,6 +39,7 @@ export type TripContract = {
   riderUuid: string;
   driverUuid: string | null;
   paymentUuid: string | null;
+  qrUrl: string | null;
   pickupLatitude: number;
   pickupLongitude: number;
   pickupName: string;

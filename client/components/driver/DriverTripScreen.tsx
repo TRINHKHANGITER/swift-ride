@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2, LoaderCircle, MapPin, Navigation, Route } from "lucide-react";
 import { DriverOnlyScreen } from "@/components/driver/DriverOnlyScreen";
@@ -29,6 +29,7 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
   const [movementRoute, setMovementRoute] = useState<{ type: string; coordinates: number[][] } | null>(null);
   const [movementTarget, setMovementTarget] = useState<{ latitude: number; longitude: number } | null>(null);
   const [originalLocation, setOriginalLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const previousStatusRef = useRef<string | null>(null);
   const { tripRoute, driverRoute } = useTripRoutes(trip);
 
   const loadTrip = useCallback(async () => {
@@ -44,15 +45,44 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
     } catch { setError("Không thể tải chuyến đi."); }
   }, [tripUuid]);
 
+  const status = trip ? tripStatusName(trip.status) : "";
+  const isTerminalStatus = status === "Paid" || status === "Cancelled" || status === "Failed";
+
   useEffect(() => {
+    if (isTerminalStatus) return;
+
     const initial = window.setTimeout(() => void loadTrip(), 0);
     const interval = window.setInterval(() => void loadTrip(), 3_000);
     return () => { window.clearTimeout(initial); window.clearInterval(interval); };
-  }, [loadTrip]);
+  }, [isTerminalStatus, loadTrip]);
 
-  const status = trip ? tripStatusName(trip.status) : "";
   const isCarryingPassenger = status === "PickedUp";
-  const isFinished = status === "DroppedOff";
+  const isAwaitingPayment = status === "DroppedOff" || status === "PaymentPending";
+  const isPaid = status === "Paid";
+  const isFinished = isAwaitingPayment || isPaid;
+
+  useEffect(() => {
+    if (!status) return;
+
+    const previousStatus = previousStatusRef.current;
+    if (previousStatus && previousStatus !== status) {
+      const statusTitle = {
+        EnRoute: "Đang tới điểm đón",
+        PickedUp: "Đã đón khách",
+        DroppedOff: "Đã trả khách",
+        PaymentPending: "Đang chờ khách thanh toán",
+        Paid: "Khách đã thanh toán",
+      }[status] ?? "Trạng thái chuyến đi đã thay đổi";
+      window.alert(`Cập nhật chuyến đi: ${statusTitle}`);
+    }
+
+    previousStatusRef.current = status;
+
+    if (status === "Paid") {
+      window.localStorage.removeItem("swift-ride-active-trip");
+      router.replace("/driver");
+    }
+  }, [router, status]);
   const current = trip && trip.driverLatitude !== null && trip.driverLongitude !== null
     ? { latitude: trip.driverLatitude, longitude: trip.driverLongitude } : null;
   const operationTarget = trip ? (isCarryingPassenger
@@ -118,7 +148,7 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
       <main className="mx-auto min-h-dvh w-full max-w-140 bg-[#f5f7f6] pb-72 shadow-[0_0_35px_rgba(15,45,35,0.08)]">
         <header className="flex items-center gap-3 border-b border-[#edf0ee] bg-white px-5 pb-4 pt-[max(16px,env(safe-area-inset-top))]">
           <button type="button" onClick={() => router.push("/driver/active")} className="grid size-10 place-items-center rounded-full hover:bg-[#f0f3f2]" aria-label="Quay lại"><ArrowLeft className="size-5" /></button>
-          <div><h1 className="text-lg font-bold text-[#17211e]">Chi tiết chuyến đi</h1><p className="text-xs text-[#71807a]">{isFinished ? "Đã trả khách" : isCarryingPassenger ? "Đang tới điểm trả" : "Đang tới điểm đón"}</p></div>
+          <div><h1 className="text-lg font-bold text-[#17211e]">Chi tiết chuyến đi</h1><p className="text-xs text-[#71807a]">{isPaid ? "Đã thanh toán" : isAwaitingPayment ? "Đang chờ khách thanh toán" : isCarryingPassenger ? "Đang tới điểm trả" : "Đang tới điểm đón"}</p></div>
         </header>
 
         {!trip && !error && <div className="grid min-h-80 place-items-center"><LoaderCircle className="size-8 animate-spin text-[#126b4f]" /></div>}
@@ -145,7 +175,10 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
         {trip && <aside className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-140 border-t border-[#dfe6e3] bg-white px-5 pb-[max(18px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-12px_30px_rgba(15,45,35,0.12)]" aria-label="Toolbox mô phỏng tài xế">
           <div className="flex items-center gap-2 text-sm font-bold text-[#17211e]"><Route className="size-4 text-[#126b4f]" /> Toolbox mô phỏng</div>
           {isFinished ? (
-            <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#e8f3ef] p-4 text-[#126b4f]"><CheckCircle2 className="size-6" /><span className="font-bold">Chuyến đi đã hoàn thành</span></div>
+            <div className="mt-3 flex items-center gap-3 rounded-xl bg-[#e8f3ef] p-4 text-[#126b4f]">
+              {isPaid ? <CheckCircle2 className="size-6" /> : <LoaderCircle className="size-6 animate-spin" />}
+              <span className="font-bold">{isPaid ? "Khách đã thanh toán" : status === "PaymentPending" ? "Đang chờ khách thanh toán" : "Đang tạo hóa đơn thanh toán"}</span>
+            </div>
           ) : (
             <>
               <p className="mt-2 text-xs text-[#71807a]">Chọn nhanh vị trí để kiểm thử hành trình của tài xế.</p>

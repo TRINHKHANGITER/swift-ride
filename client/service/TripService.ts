@@ -52,6 +52,11 @@ class TripService {
     return response.data;
   }
 
+  async getDriverTripHistory(): Promise<TripHistoryContract[]> {
+    const response = await httpClient.get<TripHistoryContract[]>("/ts/driver/history");
+    return response.data;
+  }
+
   async acceptTrip(tripUuid: string): Promise<TripContract> {
     const response = await httpClient.post<TripContract>(
       `/ts/driver/trip/${tripUuid}/accept`,

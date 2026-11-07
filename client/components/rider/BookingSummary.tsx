@@ -85,8 +85,8 @@ export function BookingSummary() {
         typeof requestError === "object" &&
         requestError !== null &&
         "response" in requestError
-          ? (requestError as { response?: { data?: { message?: string } } }).response
-              ?.data?.message
+          ? (requestError as { response?: { data?: { message?: string } } })
+              .response?.data?.message
           : undefined;
       setError(message ?? "Chưa thể đặt xe. Vui lòng thử lại.");
     } finally {
@@ -147,7 +147,10 @@ export function BookingSummary() {
 
               <div className="relative flex gap-4">
                 <span className="mt-1 grid size-4.75 shrink-0 place-items-center rounded-full ring-4 ring-white">
-                  <MapPin className="size-3 text-[#b05d43]" fill="currentColor" />
+                  <MapPin
+                    className="size-3 text-[#b05d43]"
+                    fill="currentColor"
+                  />
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-wide text-[#71807a]">
@@ -165,6 +168,15 @@ export function BookingSummary() {
               </div>
             </div>
           </section>
+
+          {error && (
+            <div
+              role="alert"
+              className="rounded bg-[#fff0ec] px-4 py-3 text-sm text-[#9a422d]"
+            >
+              {error}
+            </div>
+          )}
 
           <section className="overflow-hidden rounded-xl border border-[#e3e8e6] bg-white">
             <ViewMapLine
@@ -192,32 +204,29 @@ export function BookingSummary() {
                 <div className="flex items-center gap-3 pr-4">
                   <Route className="size-5 shrink-0 text-[#66736e]" />
                   <div>
-                  <p className="font-bold text-[#17211e]">
-                    {trip.distanceKM.toLocaleString("vi-VN", {
-                      maximumFractionDigits: 1,
-                    })} km
-                  </p>
-                  <p className="text-xs text-[#71807a]">Quãng đường</p>
+                    <p className="font-bold text-[#17211e]">
+                      {trip.distanceKM.toLocaleString("vi-VN", {
+                        maximumFractionDigits: 1,
+                      })}{" "}
+                      km
+                    </p>
+                    <p className="text-xs text-[#71807a]">Quãng đường</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 pl-4">
                   <Clock3 className="size-5 shrink-0 text-[#66736e]" />
                   <div>
-                  <p className="font-bold text-[#17211e]">
-                    Khoảng {Math.max(1, Math.ceil(trip.durationMin))} phút
-                  </p>
-                  <p className="text-xs text-[#71807a]">{trip.durationMin} phút</p>
-                  <p className="text-xs text-[#71807a]">Thời gian đi</p>
+                    <p className="font-bold text-[#17211e]">
+                      Khoảng {Math.max(1, Math.ceil(trip.durationMin))} phút
+                    </p>
+                    <p className="text-xs text-[#71807a]">
+                      {trip.durationMin} phút
+                    </p>
+                    <p className="text-xs text-[#71807a]">Thời gian đi</p>
                   </div>
                 </div>
               </div>
             </section>
-          )}
-
-          {error && (
-            <div role="alert" className="rounded-2xl bg-[#fff0ec] px-4 py-3 text-sm text-[#9a422d]">
-              {error}
-            </div>
           )}
         </div>
 

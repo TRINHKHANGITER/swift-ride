@@ -29,6 +29,29 @@ public sealed class DriverController(
     // Rabbitmq 
     IPublishEndpoint publishEndpoint) : ControllerBase
 {
+    [HttpGet("history")]
+    public async Task<ActionResult<IReadOnlyList<HistoryTripResponseContract>>> GetTripHistoryAsync(
+        CancellationToken cancellationToken)
+    {
+        var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
+        var driverUuid = session.Profile?.DriverUuid
+            ?? throw new UnauthorizedAccessException("Tài khoản không phải là tài xế.");
+        var trips = await tripService.GetTripHistoryByDriverAsync(driverUuid, cancellationToken);
+
+        return Ok(trips.Select(trip => new HistoryTripResponseContract
+        {
+            Uuid = trip.Uuid,
+            PickupName = trip.PickupName,
+            DestinationName = trip.DestinationName,
+            DistanceKM = trip.DistanceKM,
+            DurationMin = trip.DurationMin,
+            Price = trip.Price,
+            Status = trip.Status.ToString(),
+            CreatedAt = trip.CreatedAt,
+            UpdatedAt = trip.UpdatedAt
+        }));
+    }
+
     [HttpGet("{driverUuid:guid}")]
     public async Task<ActionResult<DriverDetailsResponse>> GetByUuidAsync(
         Guid driverUuid,

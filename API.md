@@ -2,18 +2,18 @@
 
 ## Tổng quan
 
-Trong `src` có **27 API nghiệp vụ**, được tính theo số action HTTP trong các controller:
+Trong `src` có **30 API nghiệp vụ**, được tính theo số action HTTP trong các controller:
 
 | Service | Số API | Đường dẫn truy cập |
 |---|---:|---|
-| Trip Service | 19 | Qua Gateway: `/ts/...` |
+| Trip Service | 22 | Qua Gateway: `/ts/...` |
 | Matching & Pricing Service | 4 | Qua Gateway: `/mp/...` |
-| Payment Service | 4 | Trực tiếp: `http://localhost:5239/...` |
-| **Tổng** | **27** | |
+| Payment Service | 4 | Qua Gateway: `/pm/...` |
+| **Tổng** | **30** | |
 
 Ngoài ra, API Gateway có `GET /` trả về `Hello World!` để kiểm tra Gateway đang chạy. Endpoint này không được tính là API nghiệp vụ.
 
-> Lưu ý: 2 API vị trí tài xế của Matching & Pricing Service cùng hỗ trợ cả tiền tố `/driver` và `/drivers`. Vì vậy có **29 URL nghiệp vụ thực tế**, nhưng chỉ có **27 action API**. Các endpoint OpenAPI chỉ xuất hiện trong môi trường Development và không được tính.
+> Lưu ý: 2 API vị trí tài xế của Matching & Pricing Service cùng hỗ trợ cả tiền tố `/driver` và `/drivers`. Vì vậy có **32 URL nghiệp vụ thực tế**, nhưng chỉ có **30 action API**. Các endpoint OpenAPI chỉ xuất hiện trong môi trường Development và không được tính.
 
 ## Quy ước
 
@@ -21,7 +21,7 @@ Ngoài ra, API Gateway có `GET /` trả về `Hello World!` để kiểm tra Ga
 - `JWT`: gửi access token qua header `Authorization: Bearer <token>`.
 - `{...}`: tham số động trên URL.
 
-## 1. Trip Service — 19 API
+## 1. Trip Service — 22 API
 
 Base URL qua Gateway: `http://localhost:8000/ts`
 
@@ -58,6 +58,14 @@ Base URL qua Gateway: `http://localhost:8000/ts`
 | 17 | `POST` | `/driver/trip/{tripUuid}/pickup` | JWT | Xác nhận đã đón hành khách. |
 | 18 | `POST` | `/driver/trip/{tripUuid}/dropoff` | JWT | Xác nhận trả khách và phát sự kiện tạo thanh toán. |
 | 19 | `GET` | `/drivers/notifications/stream` | JWT | Mở luồng SSE nhận đề nghị chuyến đi theo thời gian thực. |
+| 20 | `GET` | `/driver/history` | JWT | Lấy lịch sử các chuyến đã trả khách của tài xế hiện tại. |
+
+### Thanh toán
+
+| # | Method | Endpoint | Quyền | Ý nghĩa |
+|---:|---|---|---|---|
+| 21 | `GET` | `/payments` | JWT | Lấy danh sách hóa đơn của hành khách hiện tại từ Payment Service. |
+| 22 | `GET` | `/payments/driver` | JWT | Lấy danh sách hóa đơn và thu nhập của tài xế hiện tại. |
 
 ## 2. Matching & Pricing Service — 4 API
 
@@ -72,9 +80,7 @@ Base URL qua Gateway: `http://localhost:8000/mp`
 
 ## 3. Payment Service — 4 API
 
-Base URL trực tiếp: `http://localhost:5239`
-
-> API Gateway hiện chưa cấu hình route đến Payment Service.
+Base URL qua Gateway: `http://localhost:8000/pm`
 
 | # | Method | Endpoint | Quyền | Ý nghĩa |
 |---:|---|---|---|---|

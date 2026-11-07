@@ -76,10 +76,19 @@ builder.Services.AddHttpClient<MatchingPricingService>(httpClient =>
 
     httpClient.BaseAddress = new Uri($"{endpoint.TrimEnd('/')}/");
 });
+builder.Services.AddHttpClient<PaymentService>(httpClient =>
+{
+    var endpoint = builder.Configuration["ApiGateway:Endpoint"]
+        ?? throw new InvalidOperationException("Thiếu cấu hình ApiGateway:Endpoint.");
+
+    httpClient.BaseAddress = new Uri($"{endpoint.TrimEnd('/')}/");
+});
 builder.Services.AddScoped<IMatchingPricingService>(serviceProvider =>
     serviceProvider.GetRequiredService<MatchingPricingService>());
 builder.Services.AddScoped<ITripMatchingService>(serviceProvider =>
     serviceProvider.GetRequiredService<MatchingPricingService>());
+builder.Services.AddScoped<IPaymentService>(serviceProvider =>
+    serviceProvider.GetRequiredService<PaymentService>());
 
 // Default service 
 builder.Services.AddScoped<IJwtService, JwtService>();

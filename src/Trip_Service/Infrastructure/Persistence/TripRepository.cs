@@ -52,6 +52,18 @@ public sealed class TripRepository(TripDBContext dbContext) : ITripRepository
             .OrderByDescending(trip => trip.UpdatedAt)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Trip>> FindHistoryByDriverAsync(
+        Guid driverUuid,
+        CancellationToken cancellationToken = default) =>
+        await dbContext.Trips.AsNoTracking()
+            .Where(trip =>
+                trip.DriverUuid == driverUuid &&
+                (trip.Status == TripStatus.DroppedOff ||
+                 trip.Status == TripStatus.PaymentPending ||
+                 trip.Status == TripStatus.Paid))
+            .OrderByDescending(trip => trip.UpdatedAt)
+            .ToListAsync(cancellationToken);
+
     public async Task AddAsync(Trip trip, CancellationToken cancellationToken = default)
     {
         dbContext.Trips.Add(trip);

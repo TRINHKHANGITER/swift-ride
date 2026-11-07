@@ -34,6 +34,11 @@ public sealed class TripService(
         CancellationToken cancellationToken = default) =>
         tripRepository.FindHistoryByRiderAsync(riderUuid, cancellationToken);
 
+    public Task<IReadOnlyList<Trip>> GetTripHistoryByDriverAsync(
+        Guid driverUuid,
+        CancellationToken cancellationToken = default) =>
+        tripRepository.FindHistoryByDriverAsync(driverUuid, cancellationToken);
+
     public async Task<Trip> CreateTripAsync(
         Guid riderUuid,
         CreateTripRequestContract contract,

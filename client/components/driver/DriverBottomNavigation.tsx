@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BriefcaseBusiness, Radar, UserRound } from "lucide-react";
+import { BriefcaseBusiness, History, Radar, UserRound } from "lucide-react";
 
 const navItems = [
   { name: "Dò đơn", href: "/driver", icon: Radar },
   { name: "Đang làm", href: "/driver/active", icon: BriefcaseBusiness },
+  { name: "Lịch sử", href: "/driver/history", icon: History },
   { name: "Tài khoản", href: "/driver/account", icon: UserRound },
 ];
 
@@ -24,7 +25,7 @@ export function DriverBottomNavigation() {
           <Link
             key={href}
             href={href}
-            className={`flex min-w-20 flex-col items-center gap-1 text-[11px] ${active ? "font-bold text-[#126b4f]" : "text-[#74807b]"}`}
+            className={`flex min-w-16 flex-col items-center gap-1 text-[11px] ${active ? "font-bold text-[#126b4f]" : "text-[#74807b]"}`}
           >
             <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
             <span>{name}</span>

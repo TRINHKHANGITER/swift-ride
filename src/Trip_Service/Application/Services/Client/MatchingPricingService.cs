@@ -102,9 +102,9 @@ public sealed class MatchingPricingService(
             excludedDrivers.Add(driverUuid);
         }
 
-        trip.DriverUuid = null;
-        trip.Status = TripStatus.Failed;
-        await tripService.UpdateTripAsync(trip, cancellationToken);
+        // trip.DriverUuid = null;
+        // trip.Status = TripStatus.Failed;
+        // await tripService.UpdateTripAsync(trip, cancellationToken);
 
         throw new InvalidOperationException("Không còn tài xế phù hợp để nhận chuyến đi.");
     }
