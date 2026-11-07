@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Trip_Service.Application.Contracts;
 using Trip_Service.Application.Contracts.Trip;
-using Trip_Service.Application.Contracts.Trips;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
 using Trip_Service.Infrastructure.Persistence.Impl;
@@ -25,7 +24,7 @@ public sealed class TripController(
     // ! [Rider] - Trip history
     [Authorize]
     [HttpGet("history")]
-    public async Task<ActionResult<IReadOnlyList<TripHistoryResponse>>> GetTripHistoryAsync(
+    public async Task<ActionResult<IReadOnlyList<HistoryTripResponseContract>>> GetTripHistoryAsync(
         CancellationToken cancellationToken)
     {
         var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
@@ -35,7 +34,7 @@ public sealed class TripController(
         }
 
         var trips = await tripService.GetTripHistoryByRiderAsync(session.Account.Uuid, cancellationToken);
-        return Ok(trips.Select(trip => new TripHistoryResponse
+        return Ok(trips.Select(trip => new HistoryTripResponseContract
         {
             Uuid = trip.Uuid,
             PickupName = trip.PickupName,
@@ -52,7 +51,7 @@ public sealed class TripController(
     // ! [Rider] - Get active trip
     [Authorize]
     [HttpGet("active")]
-    public async Task<ActionResult<TripDetailsResponse?>> GetActiveTripAsync(CancellationToken cancellationToken)
+    public async Task<ActionResult<TripResponseContract?>> GetActiveTripAsync(CancellationToken cancellationToken)
     {
         var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
         // Check profile, driver will get a profile, rider isn't
@@ -66,7 +65,7 @@ public sealed class TripController(
     // ! Get trip detail
     [Authorize]
     [HttpGet("{tripUuid:guid}")]
-    public async Task<ActionResult<TripDetailsResponse>> GetTripAsync(
+    public async Task<ActionResult<TripResponseContract>> GetTripAsync(
         [FromRoute] Guid tripUuid,
         CancellationToken cancellationToken)
     {
@@ -85,8 +84,8 @@ public sealed class TripController(
     // ! [Rider] - Create trip
     [Authorize]
     [HttpPost("")]
-    public async Task<ActionResult<CreateTripResponse>> CreateTripAsync(
-        [FromBody] CreateTripRequest contract,
+    public async Task<ActionResult<CreateTripResponseContract>> CreateTripAsync(
+        [FromBody] CreateTripRequestContract contract,
         CancellationToken cancellationToken)
     {
         var trip = await tripService.CreateTripAsync(GetAccountUuid(), contract, cancellationToken);
@@ -144,7 +143,7 @@ public sealed class TripController(
     // ! [Rider] - Cancel a trip while waiting for a driver
     [Authorize]
     [HttpPost("{tripUuid:guid}/cancel")]
-    public async Task<ActionResult<TripDetailsResponse>> CancelTripAsync(
+    public async Task<ActionResult<TripResponseContract>> CancelTripAsync(
         [FromRoute] Guid tripUuid,
         CancellationToken cancellationToken)
     {
@@ -170,9 +169,9 @@ public sealed class TripController(
     // ! [Driver] - Update Driver Location
     [Authorize]
     [HttpPost("{tripUuid:guid}/driver-location")]
-    public async Task<ActionResult<TripDetailsResponse>> UpdateDriverLocationAsync(
+    public async Task<ActionResult<TripResponseContract>> UpdateDriverLocationAsync(
         [FromRoute] Guid tripUuid,
-        [FromBody] UpdateDriverLocationRequest request,
+        [FromBody] UpdateDriverLocationRequestContract request,
         CancellationToken cancellationToken)
     {
         if (!double.IsFinite(request.Latitude) || request.Latitude is < -90 or > 90 ||
@@ -223,12 +222,12 @@ public sealed class TripController(
         throw new UnauthorizedAccessException("Token không chứa Uuid hợp lệ.");
     }
 
-    private async Task<TripDetailsResponse> MapDetailsAsync(
+    private async Task<TripResponseContract> MapDetailsAsync(
         Trip trip,
         CancellationToken cancellationToken,
         DriverLocationContract? driverLocation = null)
     {
-        TripDriverView? driverView = null;
+        TripDriverContract? driverView = null;
         if (trip.DriverUuid is { } driverUuid)
         {
             driverLocation ??= await matchingPricingClient.GetDriverLocationAsync(driverUuid, cancellationToken);
@@ -238,7 +237,7 @@ public sealed class TripController(
                 var account = await accountRepository.FindByUuidAsync(profile.AccountUuid, cancellationToken);
                 if (account is not null)
                 {
-                    driverView = new TripDriverView
+                    driverView = new TripDriverContract
                     {
                         Uuid = driverUuid,
                         Fullname = account.Fullname,
@@ -256,12 +255,13 @@ public sealed class TripController(
             coordinates = JsonSerializer.Deserialize<double[][]>(trip.RouteGeometryJson);
         }
 
-        return new TripDetailsResponse
+        return new TripResponseContract
         {
             Uuid = trip.Uuid,
             RiderUuid = trip.RiderUuid,
             DriverUuid = trip.DriverUuid,
             PaymentUuid = trip.PaymentUuid,
+            QrUrl = trip.QrUrl,
             PickupName = trip.PickupName,
             PickupLatitude = trip.PickupLatitude,
             PickupLongitude = trip.PickupLongitude,
@@ -275,29 +275,29 @@ public sealed class TripController(
             DriverLatitude = driverLocation?.Latitude,
             DriverLongitude = driverLocation?.Longitude,
             Driver = driverView,
-            Geometry = coordinates is null ? null : new TripRouteView { Coordinates = coordinates },
+            Geometry = coordinates is null ? null : new TripRouteContract { Coordinates = coordinates },
             CreatedAt = trip.CreatedAt,
             UpdatedAt = trip.UpdatedAt
         };
     }
 
-    private static CreateTripResponse MapResponse(Trip trip, OSRMGeometryContract geometry) => new()
+    private static CreateTripResponseContract MapResponse(Trip trip, OSRMGeometryContract geometry) => new()
     {
         Uuid = trip.Uuid,
         RiderUuid = trip.RiderUuid,
-        Pickup = new LocationView
+        Pickup = new CreateTripLocationContract
         {
             Name = trip.PickupName,
             Latitude = trip.PickupLatitude,
             Longitude = trip.PickupLongitude
         },
-        Destination = new LocationView
+        Destination = new CreateTripLocationContract
         {
             Name = trip.DestinationName,
             Latitude = trip.DestinationLatitude,
             Longitude = trip.DestinationLongitude
         },
-        Geometry = new GeometryView
+        Geometry = new CreateTripGeometryContract
         {
             Type = geometry.Type,
             Coordinates = geometry.Coordinates

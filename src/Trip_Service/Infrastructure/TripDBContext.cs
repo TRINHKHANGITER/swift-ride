@@ -3,9 +3,9 @@ using Trip_Service.Domain;
 
 namespace Trip_Service.Infrastructure.Persistence;
 
-public class TripDbContext : DbContext
+public class TripDBContext : DbContext
 {
-    public TripDbContext(DbContextOptions<TripDbContext> options) : base(options) { }
+    public TripDBContext(DbContextOptions<TripDBContext> options) : base(options) { }
 
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<DriverProfile> DriverProfiles => Set<DriverProfile>();

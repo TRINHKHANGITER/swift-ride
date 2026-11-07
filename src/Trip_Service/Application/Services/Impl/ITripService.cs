@@ -15,7 +15,7 @@ public interface ITripService
 
     Task<Trip> CreateTripAsync(
         Guid riderUuid,
-        CreateTripRequest contract,
+        CreateTripRequestContract contract,
         CancellationToken cancellationToken = default);
 
     Task UpdateTripAsync(Trip trip, CancellationToken cancellationToken = default);

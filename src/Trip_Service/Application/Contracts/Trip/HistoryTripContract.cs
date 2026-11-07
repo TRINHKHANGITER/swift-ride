@@ -1,6 +1,6 @@
 namespace Trip_Service.Application.Contracts.Trip;
 
-public sealed class TripHistoryResponse
+public sealed class HistoryTripResponseContract
 {
     public Guid Uuid { get; init; }
     public required string PickupName { get; init; }

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Trip_Service.Api.Middleware;
 using Trip_Service.Application.Services;
+using Trip_Service.Application.Services.Client;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
 using Trip_Service.Infrastructure;
@@ -13,6 +14,7 @@ using Trip_Service.Infrastructure.Authentication;
 using Trip_Service.Infrastructure.Persistence;
 using Trip_Service.Infrastructure.Persistence.Impl;
 using Trip_Service.Infrastructure.Persistence.Repositories;
+using Trip_Service.Infrastructure.RabbitMQ.Consumer;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +24,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 
 // Database and Jwt
-builder.Services.AddDbContext<TripDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<TripDBContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
 
 var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? throw new InvalidOperationException("Thiếu cấu hình Jwt`");
@@ -49,8 +51,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddMassTransit(x =>
 {
     // x.AddConsumer<DriverMatchedConsumer>();
-    // x.AddConsumer<PaymentSettledConsumer>();
+    x.AddConsumer<PaymentRequestedConsumer>();
+    x.AddConsumer<PaymentSettledConsumer>();
 
+    // Send message to rabbitMQ configuration
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host(builder.Configuration["RabbitMq:Host"], "/", h =>
@@ -65,7 +69,17 @@ builder.Services.AddMassTransit(x =>
 
 // Inject core
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
-builder.Services.AddHttpClient<IMatchingPricingService, MatchingPricingService>();
+builder.Services.AddHttpClient<MatchingPricingService>(httpClient =>
+{
+    var endpoint = builder.Configuration["ApiGateway:Endpoint"]
+        ?? throw new InvalidOperationException("Thiếu cấu hình ApiGateway:Endpoint.");
+
+    httpClient.BaseAddress = new Uri($"{endpoint.TrimEnd('/')}/");
+});
+builder.Services.AddScoped<IMatchingPricingService>(serviceProvider =>
+    serviceProvider.GetRequiredService<MatchingPricingService>());
+builder.Services.AddScoped<ITripMatchingService>(serviceProvider =>
+    serviceProvider.GetRequiredService<MatchingPricingService>());
 
 // Default service 
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -74,7 +88,6 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<ISendNotificateService, SendNotificateService>();
 // Application service
 builder.Services.AddScoped<ITripService, TripService>();
-builder.Services.AddScoped<ITripMatchingService, TripMatchingService>();
 
 // Application Repository
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();

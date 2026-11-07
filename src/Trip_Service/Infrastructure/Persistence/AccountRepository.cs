@@ -4,7 +4,7 @@ using Trip_Service.Infrastructure.Persistence.Impl;
 
 namespace Trip_Service.Infrastructure.Persistence.Repositories;
 
-public sealed class AccountRepository(TripDbContext dbContext) : IAccountRepository
+public sealed class AccountRepository(TripDBContext dbContext) : IAccountRepository
 {
     public Task<Account?> FindByPhoneAsync(string phone, CancellationToken cancellationToken = default) =>
         dbContext.Accounts.AsNoTracking()

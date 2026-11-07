@@ -6,7 +6,7 @@ namespace Trip_Service.Infrastructure.Persistence.Repositories;
 
 
 
-public sealed class DriverRepository(TripDbContext dbContext) : IDriverRepository
+public sealed class DriverRepository(TripDBContext dbContext) : IDriverRepository
 {
     public Task<DriverProfile?> FindByUuidAsync(Guid driverUuid, CancellationToken cancellationToken = default) =>
         dbContext.DriverProfiles.AsNoTracking()

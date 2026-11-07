@@ -30,6 +30,7 @@ public sealed class Trip
     public Guid RiderUuid { get; set; }
     public Guid? DriverUuid { get; set; }
     public Guid? PaymentUuid { get; set; }
+    public string? QrUrl { get; set; }
 
     // Pickup and Destination information
     public double PickupLatitude { get; set; }

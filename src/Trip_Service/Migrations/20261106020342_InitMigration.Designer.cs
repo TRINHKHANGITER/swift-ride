@@ -11,7 +11,7 @@ using Trip_Service.Infrastructure.Persistence;
 
 namespace Trip_Service.Migrations
 {
-    [DbContext(typeof(TripDbContext))]
+    [DbContext(typeof(TripDBContext))]
     [Migration("20261106020342_InitMigration")]
     partial class InitMigration
     {

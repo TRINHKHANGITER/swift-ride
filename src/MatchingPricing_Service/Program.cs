@@ -77,7 +77,7 @@ builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<TripAcceptedConsumer>();
     x.AddConsumer<TripDropedOffConsumer>();
-    x.AddConsumer<DriverOnlineStatusConsumer>();
+    x.AddConsumer<DriverOnlineConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {

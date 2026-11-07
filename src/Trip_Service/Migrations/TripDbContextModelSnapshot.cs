@@ -10,7 +10,7 @@ using Trip_Service.Infrastructure.Persistence;
 
 namespace Trip_Service.Migrations
 {
-    [DbContext(typeof(TripDbContext))]
+    [DbContext(typeof(TripDBContext))]
     partial class TripDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -231,6 +231,9 @@ namespace Trip_Service.Migrations
                     b.Property<decimal?>("Price")
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("QrUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RiderUuid")
                         .HasColumnType("uniqueidentifier");

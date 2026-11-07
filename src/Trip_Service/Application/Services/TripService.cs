@@ -36,7 +36,7 @@ public sealed class TripService(
 
     public async Task<Trip> CreateTripAsync(
         Guid riderUuid,
-        CreateTripRequest contract,
+        CreateTripRequestContract contract,
         CancellationToken cancellationToken = default)
     {
         if (await tripRepository.FindActiveByRiderAsync(riderUuid, cancellationToken: cancellationToken) is not null)

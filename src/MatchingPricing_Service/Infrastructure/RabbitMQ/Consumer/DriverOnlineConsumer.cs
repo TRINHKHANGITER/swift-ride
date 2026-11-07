@@ -4,11 +4,11 @@ using MatchingPricing_Service.Infrastructure.RabbitMQ.Message;
 
 namespace MatchingPricing_Service.Infrastructure.RabbitMQ;
 
-public sealed class DriverOnlineStatusConsumer(
+public sealed class DriverOnlineConsumer(
     IDriverLocationService driverLocationService)
-    : IConsumer<DriverOnlineStatus>
+    : IConsumer<DriverOnline>
 {
-    public async Task Consume(ConsumeContext<DriverOnlineStatus> context)
+    public async Task Consume(ConsumeContext<DriverOnline> context)
     {
         await driverLocationService.UpdateOnlineStatus(
             context.Message.DriverUuid,

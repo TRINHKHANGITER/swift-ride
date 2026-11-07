@@ -4,7 +4,7 @@ using Trip_Service.Infrastructure.Persistence.Impl;
 
 namespace Trip_Service.Infrastructure.Persistence.Repositories;
 
-public sealed class TripDriverRejectionRepository(TripDbContext dbContext)
+public sealed class TripDriverRejectionRepository(TripDBContext dbContext)
     : ITripDriverRejectionRepository
 {
     public async Task<IReadOnlyList<Guid>> FindDriverUuidsByTripAsync(

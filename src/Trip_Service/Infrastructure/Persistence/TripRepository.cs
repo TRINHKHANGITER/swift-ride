@@ -6,7 +6,7 @@ namespace Trip_Service.Infrastructure.Persistence.Repositories;
 
 
 
-public sealed class TripRepository(TripDbContext dbContext) : ITripRepository
+public sealed class TripRepository(TripDBContext dbContext) : ITripRepository
 {
     public Task<Trip?> FindByUuidAsync(Guid uuid, CancellationToken cancellationToken = default) =>
         dbContext.Trips.AsNoTracking()
@@ -23,7 +23,7 @@ public sealed class TripRepository(TripDbContext dbContext) : ITripRepository
                 trip.Uuid != excludeTripUuid &&
                 trip.DriverUuid != null &&
                 trip.Status >= TripStatus.Requested &&
-                trip.Status <= TripStatus.PickedUp,
+                trip.Status <= TripStatus.PaymentPending,
                 cancellationToken);
 
     public Task<Trip?> FindActiveByDriverAsync(
@@ -36,7 +36,7 @@ public sealed class TripRepository(TripDbContext dbContext) : ITripRepository
                 trip.DriverUuid == driverUuid &&
                 trip.Uuid != excludeTripUuid &&
                 trip.Status >= TripStatus.Requested &&
-                trip.Status <= TripStatus.PickedUp,
+                trip.Status <= TripStatus.PaymentPending,
                 cancellationToken);
 
     public async Task<IReadOnlyList<Trip>> FindHistoryByRiderAsync(
