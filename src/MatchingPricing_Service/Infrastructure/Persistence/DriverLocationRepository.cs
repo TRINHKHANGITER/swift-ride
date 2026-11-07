@@ -92,7 +92,7 @@ public sealed class DriverLocationRepository : IDriverLocationRepository
             driver => driver.DriverUuid == driverUuid,
             Builders<DriverLocation>.Update
                 .Set(driver => driver.IsOnline, isOnline)
-                .Set(driver => driver.UpdatedAt, DateTime.Now),
+                .Set(driver => driver.UpdatedAt, DateTime.UtcNow),
                 cancellationToken: cancellationToken
         );
 

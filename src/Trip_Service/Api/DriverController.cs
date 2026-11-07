@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Trip_Service.Application.Contracts;
@@ -7,6 +8,8 @@ using Trip_Service.Application.Contracts.Trip;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
 using Trip_Service.Infrastructure.Persistence.Impl;
+using Trip_Service.Infrastructure.RabbitMQ.Message;
+using MatchingPricing_Service.Infrastructure.RabbitMQ.Message;
 
 namespace Trip_Service.Api;
 
@@ -21,7 +24,9 @@ public sealed class DriverController(
     ITripMatchingService tripMatchingService,
     IAuthService authService,
     ISendNotificateService sendNotificateService,
-    ITripDriverRejectionRepository rejectionRepository) : ControllerBase
+    ITripDriverRejectionRepository rejectionRepository,
+    // Rabbitmq 
+    IPublishEndpoint publishEndpoint) : ControllerBase
 {
     [HttpGet("{driverUuid:guid}")]
     public async Task<ActionResult<DriverDetailsResponse>> GetByUuidAsync(
@@ -65,6 +70,25 @@ public sealed class DriverController(
         });
     }
 
+    [HttpPatch("{driverUuid:guid}/online")]
+    public async Task<IActionResult> UpdateOnlineStatusAsync(
+        [FromRoute] Guid driverUuid,
+        DriverUpdateStatusContract contract,
+        CancellationToken cancellationToken)
+    {
+        var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
+        if (session.Profile?.DriverUuid != driverUuid)
+        {
+            throw new UnauthorizedAccessException("Không thể cập nhật trạng thái của tài xế khác.");
+        }
+
+        await publishEndpoint.Publish(
+            new DriverOnlineStatus(driverUuid, contract.IsOnline),
+            cancellationToken);
+
+        return Accepted();
+    }
+
     // ! [Driver] - Accept trip
     [HttpPost("trip/{tripUuid:guid}/accept")]
     public async Task<ActionResult<Trip>> AcceptTripAsync(
@@ -87,12 +111,18 @@ public sealed class DriverController(
 
         trip.DriverUuid = driverUuid;
         trip.Status = TripStatus.DriverAccepted;
+
         await tripService.UpdateTripAsync(trip, cancellationToken);
+
         sendNotificateService.RemovePendingOffer(trip.Uuid);
-        await matchingPricingService.SetDriverAvailabilityAsync(
-            driverUuid,
-            false,
-            cancellationToken);
+
+        // * Send to rabbitmq
+        // await matchingPricingService.SetDriverAvailabilityAsync(
+        //     driverUuid,
+        //     false,
+        //     cancellationToken);
+
+        await publishEndpoint.Publish(new TripAccepted(trip.Uuid, driverUuid, DateTime.UtcNow), cancellationToken);
 
         return Ok(trip);
     }
@@ -160,10 +190,14 @@ public sealed class DriverController(
             trip.DriverUuid!.Value,
             new UpdateDriverLocationContract(trip.DestinationLatitude, trip.DestinationLongitude),
             cancellationToken);
-        await matchingPricingService.SetDriverAvailabilityAsync(
-            trip.DriverUuid.Value,
-            true,
-            cancellationToken);
+
+        // RabbitMQ
+        await publishEndpoint.Publish(new TripDropoffed(trip.DriverUuid.Value), cancellationToken);
+        // await matchingPricingService.SetDriverAvailabilityAsync(
+        //     trip.DriverUuid.Value,
+        //     true,
+        //     cancellationToken);
+        
         await tripService.UpdateTripAsync(trip, cancellationToken);
         return Ok(await MapDetailsAsync(trip, cancellationToken, location));
     }

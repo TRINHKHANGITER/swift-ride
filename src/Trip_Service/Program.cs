@@ -1,4 +1,5 @@
 using System.Text;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization();
+
+// Rabbitmq
+builder.Services.AddMassTransit(x =>
+{
+    // x.AddConsumer<DriverMatchedConsumer>();
+    // x.AddConsumer<PaymentSettledConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"], "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"]!);
+            h.Password(builder.Configuration["RabbitMq:Password"]!);
+        });
+
+        cfg.ConfigureEndpoints(context);
+    });
+});
 
 // Inject core
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();

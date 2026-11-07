@@ -48,16 +48,4 @@ public sealed class MatchingPricingService(HttpClient httpClient) : IMatchingPri
         return await response.Content.ReadFromJsonAsync<DriverLocationContract>(cancellationToken)
             ?? throw new InvalidOperationException("MatchingPricingService trả về vị trí rỗng.");
     }
-
-    public async Task SetDriverAvailabilityAsync(
-        Guid driverUuid,
-        bool isAvailable,
-        CancellationToken cancellationToken = default)
-    {
-        using var response = await httpClient.PatchAsJsonAsync(
-            $"http://localhost:6666/drivers/{driverUuid}/availability",
-            new UpdateDriverAvailabilityContract(isAvailable),
-            cancellationToken);
-        response.EnsureSuccessStatusCode();
-    }
 }

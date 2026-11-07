@@ -12,7 +12,7 @@ class DriverService {
   }
 
   async updateIsOnline(driverUuid: string, isOnline: boolean): Promise<void> {
-    await httpClient.patch<void>(`/mp/driver/${driverUuid}/online`, {
+    await httpClient.patch<void>(`/ts/driver/${driverUuid}/online`, {
       isOnline,
     });
   }

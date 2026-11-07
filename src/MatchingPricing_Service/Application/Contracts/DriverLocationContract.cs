@@ -1,8 +1,6 @@
 namespace MatchingPricing_Service.Application.Contracts;
 
 public sealed record UpdateDriverLocationRequest(double Latitude, double Longitude);
-public sealed record UpdateDriverAvailabilityRequest(bool IsAvailable);
-public sealed record UpdateDriverOnlineStatusRequest(bool IsOnline);
 
 public sealed record DriverLocationResponse(
     Guid DriverUuid,

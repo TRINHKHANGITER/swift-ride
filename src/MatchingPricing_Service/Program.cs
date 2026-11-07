@@ -1,3 +1,4 @@
+using MassTransit;
 using MatchingPricing_Service.Api.Middleware;
 using MatchingPricing_Service.Application.Services;
 using MatchingPricing_Service.Application.Services.Impl;
@@ -5,6 +6,7 @@ using MatchingPricing_Service.Application.Services.Util;
 using MatchingPricing_Service.Infrastructure;
 using MatchingPricing_Service.Infrastructure.Persistence;
 using MatchingPricing_Service.Infrastructure.Persistence.Impl;
+using MatchingPricing_Service.Infrastructure.RabbitMQ;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 
@@ -57,6 +59,7 @@ builder.Services.AddSingleton<MongoDBInitializer>();
 // Using at controller 
 builder.Services.AddScoped<IQuoteService, QuoteService>();
 builder.Services.AddScoped<IMatchingService, MatchingDriver>();
+builder.Services.AddScoped<IDriverLocationService, DriverLocationService>();
 
 // Repsitory service
 builder.Services.AddSingleton<IDriverLocationRepository, DriverLocationRepository>();
@@ -67,6 +70,27 @@ builder.Services.AddHttpClient<IOSRMService, OSRMService>(client =>
 {
     client.DefaultRequestHeaders.UserAgent.ParseAdd("SwiftRide/1.0");
 });
+
+// RabbitMQ
+// Rabbitmq
+builder.Services.AddMassTransit(x =>
+{
+    x.AddConsumer<TripAcceptedConsumer>();
+    x.AddConsumer<TripDropedOffConsumer>();
+    x.AddConsumer<DriverOnlineStatusConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host(builder.Configuration["RabbitMq:Host"], "/", h =>
+        {
+            h.Username(builder.Configuration["RabbitMq:Username"]!);
+            h.Password(builder.Configuration["RabbitMq:Password"]!);
+        });
+
+        cfg.ConfigureEndpoints(context);
+    });
+});
+
 
 
 var app = builder.Build();
