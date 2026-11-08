@@ -53,6 +53,12 @@ namespace Payment_Service.Migrations
 
                     b.HasKey("Uuid");
 
+                    b.HasIndex("TransferCode")
+                        .IsUnique();
+
+                    b.HasIndex("TripUuid")
+                        .IsUnique();
+
                     b.ToTable("Payments");
                 });
 #pragma warning restore 612, 618

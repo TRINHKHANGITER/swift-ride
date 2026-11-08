@@ -107,6 +107,15 @@ builder.Services.AddScoped<ITripDriverRejectionRepository, TripDriverRejectionRe
 
 var app = builder.Build();
 
+if (builder.Configuration.GetValue<bool>("Database:ApplyMigrations"))
+{
+    await using var scope = app.Services.CreateAsyncScope();
+    await scope.ServiceProvider
+        .GetRequiredService<TripDBContext>()
+        .Database
+        .MigrateAsync();
+}
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

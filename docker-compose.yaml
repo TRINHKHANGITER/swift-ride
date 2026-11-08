@@ -1,0 +1,199 @@
+name: swiftride
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:-SwiftRide@12345}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" >/dev/null || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-swiftride}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-SwiftRideMongo123}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mongosh --quiet --host localhost --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand('ping').ok" | grep 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: swift-ride-payment-service
+      POSTGRES_USER: ${POSTGRES_USER:-swiftride}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SwiftRidePostgres123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-swiftride}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-SwiftRideRabbit123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  trip-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        PROJECT_PATH: src/Trip_Service/TripService.csproj
+    command: ["dotnet", "TripService.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5555
+      ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=swift-rider-trip-service;User ID=sa;Password=${MSSQL_SA_PASSWORD:-SwiftRide@12345};Encrypt=False;TrustServerCertificate=True;
+      Database__ApplyMigrations: "true"
+      ApiGateway__Endpoint: http://api-gateway:8000
+      Jwt__Issuer: TripService
+      Jwt__Audience: SwiftRideClient
+      Jwt__Secret: ${JWT_SECRET:-SwiftRideDockerDevelopmentSecretKey-ChangeBeforeProduction-2026}
+      Jwt__ExpirationMinutes: "360"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USERNAME:-swiftride}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-SwiftRideRabbit123}
+    expose:
+      - "5555"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  matching-pricing-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        PROJECT_PATH: src/MatchingPricing_Service/MatchingPricingService.csproj
+    command: ["dotnet", "MatchingPricingService.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:6666
+      MongoDB__ConnectionString: mongodb://${MONGO_USERNAME:-swiftride}:${MONGO_PASSWORD:-SwiftRideMongo123}@mongodb:27017/?authSource=admin
+      MongoDB__DatabaseName: swiftride-matching-pricing-service
+      Matching__MaxDistanceMeters: "5000"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USERNAME:-swiftride}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-SwiftRideRabbit123}
+    expose:
+      - "6666"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        PROJECT_PATH: src/Payment_Service/Payment_Service.csproj
+    command: ["dotnet", "Payment_Service.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:7777
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=swift-ride-payment-service;Username=${POSTGRES_USER:-swiftride};Password=${POSTGRES_PASSWORD:-SwiftRidePostgres123}
+      Database__ApplyMigrations: "true"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USERNAME:-swiftride}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-SwiftRideRabbit123}
+    expose:
+      - "7777"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+      args:
+        PROJECT_PATH: src/ApiGateway/ApiGateway.csproj
+    command: ["dotnet", "ApiGateway.dll"]
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8000
+      Urls: http://+:8000
+      ReverseProxy__Clusters__TCluster__Destinations__TripService__Address: http://trip-service:5555
+      ReverseProxy__Clusters__MPCluster__Destinations__MatchingPricingService__Address: http://matching-pricing-service:6666
+      ReverseProxy__Clusters__PCluster__Destinations__PaymentService__Address: http://payment-service:7777
+    ports:
+      - "8000:8000"
+    depends_on:
+      - trip-service
+      - matching-pricing-service
+      - payment-service
+    restart: unless-stopped
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+volumes:
+  sqlserver-data:
+  mongodb-data:
+  postgres-data:
+  rabbitmq-data:
