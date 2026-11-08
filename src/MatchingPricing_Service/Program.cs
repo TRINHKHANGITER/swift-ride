@@ -3,6 +3,7 @@ using MatchingPricing_Service.Api.Middleware;
 using MatchingPricing_Service.Application.Services;
 using MatchingPricing_Service.Application.Services.Impl;
 using MatchingPricing_Service.Application.Services.Util;
+using MatchingPricing_Service.Application.Services.Pricing;
 using MatchingPricing_Service.Infrastructure;
 using MatchingPricing_Service.Infrastructure.Persistence;
 using MatchingPricing_Service.Infrastructure.Persistence.Impl;
@@ -41,6 +42,17 @@ builder.Services
         "Matching MaxDistanceMeters phải lớn hơn 0.")
     .ValidateOnStart();
 
+builder.Services
+    .AddOptions<PricingOptions>()
+    .BindConfiguration(PricingOptions.SectionName)
+    .Validate(options => options.PricePerKilometer > 0, "Pricing PricePerKilometer phải lớn hơn 0.")
+    .Validate(options => options.PricePerMinute > 0, "Pricing PricePerMinute phải lớn hơn 0.")
+    .Validate(options => options.Toll >= 0, "Pricing Toll không được âm.")
+    .Validate(options => options.TaxRate >= 0, "Pricing TaxRate không được âm.")
+    .Validate(options => options.NormalMultiplier > 0, "Pricing NormalMultiplier phải lớn hơn 0.")
+    .Validate(options => options.RainMultiplier > 0, "Pricing RainMultiplier phải lớn hơn 0.")
+    .ValidateOnStart();
+
 builder.Services.AddSingleton<IMongoClient>(
     serviceProvider =>
     {
@@ -66,6 +78,8 @@ builder.Services.AddSingleton<IDriverLocationRepository, DriverLocationRepositor
 
 // Other service
 builder.Services.AddScoped<IPricingService, PricingService>();
+builder.Services.AddScoped<IPricingStrategy, NormalPricingStrategy>();
+builder.Services.AddScoped<IPricingStrategy, RainPricingStrategy>();
 builder.Services.AddHttpClient<IOSRMService, OSRMService>(client =>
 {
     client.DefaultRequestHeaders.UserAgent.ParseAdd("SwiftRide/1.0");
@@ -76,8 +90,9 @@ builder.Services.AddHttpClient<IOSRMService, OSRMService>(client =>
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<TripAcceptedConsumer>();
-    x.AddConsumer<TripDropedOffConsumer>();
+    x.AddConsumer<TripDroppedOffConsumer>();
     x.AddConsumer<DriverOnlineConsumer>();
+    x.AddConsumer<TripDriverLocationUpdatedConsumer>();
 
     x.UsingRabbitMq((context, cfg) =>
     {

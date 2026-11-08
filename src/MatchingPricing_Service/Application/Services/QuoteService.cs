@@ -27,7 +27,7 @@ public sealed class QuoteService(
         var price = pricingService.ProcessPrice(
             route.Distance / 1000,
             route.Duration / 60,
-            1
+            contract.WeatherCondition
             );
 
         return new QuoteResponseContract()
@@ -35,7 +35,9 @@ public sealed class QuoteService(
             Price = price,
             Route = route,
             DistanceKM = route.Distance / 1000,
-            DurationMin = route.Duration / 60
+            DurationMin = route.Duration / 60,
+            WeatherCondition = contract.WeatherCondition,
+            Multiplier = pricingService.GetMultiplier(contract.WeatherCondition)
         };
     }
 }

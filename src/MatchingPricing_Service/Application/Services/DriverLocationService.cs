@@ -20,17 +20,17 @@ public sealed class DriverLocationService(IDriverLocationRepository repository)
 
     public async Task<DriverLocationResponse> UpdateLocationAsync(
         Guid driverUuid,
-        UpdateDriverLocationRequest request,
+        double latitude,
+        double longitude,
         CancellationToken cancellationToken)
     {
         ValidateDriverUuid(driverUuid);
-        ArgumentNullException.ThrowIfNull(request);
-        ValidateCoordinates(request.Latitude, request.Longitude);
+        ValidateCoordinates(latitude, longitude);
 
         var location = await repository.UpdateLocationAsync(
             driverUuid,
-            request.Latitude,
-            request.Longitude,
+            latitude,
+            longitude,
             cancellationToken);
 
         return Map(location);

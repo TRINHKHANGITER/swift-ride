@@ -95,3 +95,5 @@ Desktop.ini
 *.db-wal
 *.sqlite
 *.sqlite3
+
+requirement/

@@ -10,7 +10,8 @@ public interface IDriverLocationService
 
     Task<DriverLocationResponse> UpdateLocationAsync(
         Guid driverUuid,
-        UpdateDriverLocationRequest request,
+        double latitude,
+        double longitude,
         CancellationToken cancellationToken);
 
     Task UpdateAvailabilityAsync(

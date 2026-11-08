@@ -1,5 +1,5 @@
 using MassTransit;
-using SwiftRide.Contracts.Payment;
+using SwiftRide.Contracts.Events;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
 

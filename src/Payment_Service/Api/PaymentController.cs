@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Payment_Service.Application.Contracts;
 using Payment_Service.Domain;
 using Payment_Service.Infrastructure.Persistence.Impl;
-using SwiftRide.Contracts.Payment;
+using SwiftRide.Contracts.Events;
 using System.Text.RegularExpressions;
 
 namespace Payment_Service.Api;
@@ -44,6 +44,7 @@ public sealed class PaymentController(
         return Ok(payments.Select(MapResponse).ToList());
     }
 
+    // ! IPN
     [HttpPost("ipn")]
     [AllowAnonymous]
     public async Task<ActionResult<SepayIpnResponseContract>> ReceiveIpnAsync(
@@ -71,6 +72,15 @@ public sealed class PaymentController(
         await publishEndpoint.Publish(new PaymentSettled(payment.TripUuid), cancellationToken);
 
         return Ok(new SepayIpnResponseContract(true, "Payment đã được cập nhật thành công."));
+    }
+
+    // ! Error IPN
+    [HttpPost("ipn-error")]
+    [AllowAnonymous]
+    public async Task<ActionResult> ReceiveIpnErrorAsync()
+    {
+        Console.WriteLine("IPN ERROR");
+        return Ok();
     }
 
     private static string? ExtractTransferCode(SepayIpnContract contract)

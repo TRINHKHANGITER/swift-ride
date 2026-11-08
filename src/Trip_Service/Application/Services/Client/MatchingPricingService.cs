@@ -11,10 +11,11 @@ public sealed class MatchingPricingService(
     ITripService tripService,
     ISendNotificateService sendNotificateService,
     ITripDriverRejectionRepository rejectionRepository)
-    : IMatchingPricingService, ITripMatchingService
+    : IMatchingPricingService
 {
     private const int MaxMatchingAttempts = 10;
 
+    // * Quote coodinates and price
     public async Task<QuoteResponseContract> GetQuoteAsync(QuoteRequestContract contract, CancellationToken cancellationToken = default)
     {
         using var response = await httpClient.PostAsJsonAsync("mp/quote", contract, cancellationToken);
@@ -24,6 +25,7 @@ public sealed class MatchingPricingService(
             ?? throw new InvalidOperationException("MatchingPricingService trả về dữ liệu rỗng.");
     }
 
+    // * Handle find available driver
     public async Task<MatchingResponseContract> ProcessMatchAsync(
         MatchingRequestContract contract,
         CancellationToken cancellationToken = default)
@@ -35,29 +37,7 @@ public sealed class MatchingPricingService(
             ?? throw new InvalidOperationException("MatchingPricingService trả về dữ liệu rỗng.");
     }
 
-    public async Task<DriverLocationContract?> GetDriverLocationAsync(
-        Guid driverUuid,
-        CancellationToken cancellationToken = default)
-    {
-        using var response = await httpClient.GetAsync(
-            $"mp/drivers/{driverUuid}/location", cancellationToken);
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<DriverLocationContract>(cancellationToken);
-    }
-
-    public async Task<DriverLocationContract> UpdateDriverLocationAsync(
-        Guid driverUuid,
-        UpdateDriverLocationContract request,
-        CancellationToken cancellationToken = default)
-    {
-        using var response = await httpClient.PutAsJsonAsync(
-            $"mp/drivers/{driverUuid}/location", request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<DriverLocationContract>(cancellationToken)
-            ?? throw new InvalidOperationException("MatchingPricingService trả về vị trí rỗng.");
-    }
-
+    // * When driver reject the trip, find next driver
     public async Task<MatchingResponseContract> FindAndNotifyNextDriverAsync(
         Trip trip,
         CancellationToken cancellationToken = default)

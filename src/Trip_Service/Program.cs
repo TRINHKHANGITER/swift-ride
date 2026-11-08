@@ -85,8 +85,6 @@ builder.Services.AddHttpClient<PaymentService>(httpClient =>
 });
 builder.Services.AddScoped<IMatchingPricingService>(serviceProvider =>
     serviceProvider.GetRequiredService<MatchingPricingService>());
-builder.Services.AddScoped<ITripMatchingService>(serviceProvider =>
-    serviceProvider.GetRequiredService<MatchingPricingService>());
 builder.Services.AddScoped<IPaymentService>(serviceProvider =>
     serviceProvider.GetRequiredService<PaymentService>());
 

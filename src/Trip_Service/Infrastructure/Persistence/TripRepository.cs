@@ -21,7 +21,6 @@ public sealed class TripRepository(TripDBContext dbContext) : ITripRepository
             .FirstOrDefaultAsync(trip =>
                 trip.RiderUuid == riderUuid &&
                 trip.Uuid != excludeTripUuid &&
-                trip.DriverUuid != null &&
                 trip.Status >= TripStatus.Requested &&
                 trip.Status <= TripStatus.PaymentPending,
                 cancellationToken);

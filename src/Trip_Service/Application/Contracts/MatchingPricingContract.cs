@@ -3,14 +3,21 @@ using System.Text.Json.Serialization;
 
 namespace Trip_Service.Application.Contracts;
 
-public sealed record QuoteRequestContract(LocationContract Pickup, LocationContract Destination);
+public enum WeatherCondition
+{
+    Normal,
+    Rain
+}
+
+public sealed record QuoteRequestContract(
+    LocationContract Pickup,
+    LocationContract Destination,
+    [property: JsonConverter(typeof(JsonStringEnumConverter))]
+    WeatherCondition WeatherCondition = WeatherCondition.Normal);
 public sealed record QuoteResponseContract(decimal Price, OSRMRouteContract Route, double DistanceKM, double DurationMin);
 
 public sealed record MatchingRequestContract(Guid TripUuid, LocationContract Pickup, IReadOnlyCollection<Guid> ExcludeDriverUuids);
 public sealed record MatchingResponseContract(Guid TripUuid, Guid? DriverUuid, bool IsSuccess);
-public sealed record DriverLocationContract(Guid DriverUuid, double Latitude, double Longitude, bool IsOnline, bool IsAvailable, DateTime UpdatedAt);
-public sealed record UpdateDriverLocationContract(double Latitude, double Longitude);
-public sealed record UpdateDriverAvailabilityContract(bool IsAvailable);
 
 // Helper class
 public sealed record LocationContract(double Latitude, double Longitude);

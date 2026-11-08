@@ -8,9 +8,7 @@ using Trip_Service.Application.Contracts.Trip;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
 using Trip_Service.Infrastructure.Persistence.Impl;
-using Trip_Service.Infrastructure.RabbitMQ.Message;
-using SwiftRide.Contracts.Payment;
-using MatchingPricing_Service.Infrastructure.RabbitMQ.Message;
+using SwiftRide.Contracts.Events;
 
 namespace Trip_Service.Api;
 
@@ -20,9 +18,8 @@ namespace Trip_Service.Api;
 public sealed class DriverController(
     IDriverRepository driverRepository,
     IAccountRepository accountRepository,
-    IMatchingPricingService matchingPricingService,
     ITripService tripService,
-    ITripMatchingService tripMatchingService,
+    IMatchingPricingService matchingPricingService,
     IAuthService authService,
     ISendNotificateService sendNotificateService,
     ITripDriverRejectionRepository rejectionRepository,
@@ -52,48 +49,6 @@ public sealed class DriverController(
         }));
     }
 
-    [HttpGet("{driverUuid:guid}")]
-    public async Task<ActionResult<DriverDetailsResponse>> GetByUuidAsync(
-        Guid driverUuid,
-        CancellationToken cancellationToken)
-    {
-        var profile = await driverRepository.FindByUuidAsync(driverUuid, cancellationToken);
-        if (profile is null)
-        {
-            return NotFound();
-        }
-
-        var account = await accountRepository.FindByUuidAsync(profile.AccountUuid, cancellationToken);
-        if (account is null)
-        {
-            return NotFound();
-        }
-
-        var location = await matchingPricingService.GetDriverLocationAsync(driverUuid, cancellationToken);
-
-        return Ok(new DriverDetailsResponse
-        {
-            DriverUuid = profile.DriverUuid,
-            AccountUuid = profile.AccountUuid,
-            Fullname = account.Fullname,
-            Phone = account.Phone,
-            LicenseNumber = profile.LicenseNumber,
-            VehicleName = profile.VehicleName,
-            LicensePlate = profile.LicensePlate,
-            IsVerified = profile.IsVerified,
-            Location = location is null
-                ? null
-                : new DriverLocationResponse
-                {
-                    Latitude = location.Latitude,
-                    Longitude = location.Longitude,
-                    IsOnline = location.IsOnline,
-                    IsAvailable = location.IsAvailable,
-                    UpdatedAt = location.UpdatedAt
-                }
-        });
-    }
-
     [HttpPatch("{driverUuid:guid}/online")]
     public async Task<IActionResult> UpdateOnlineStatusAsync(
         [FromRoute] Guid driverUuid,
@@ -106,7 +61,7 @@ public sealed class DriverController(
             throw new UnauthorizedAccessException("Không thể cập nhật trạng thái của tài xế khác.");
         }
 
-        // * Use RabbitMQ
+        // * Use RabbitMQ to update driver online status
         await publishEndpoint.Publish(
             new DriverOnline(driverUuid, contract.IsOnline),
             cancellationToken);
@@ -141,12 +96,7 @@ public sealed class DriverController(
 
         sendNotificateService.RemovePendingOffer(trip.Uuid);
 
-        // * Use RabbitMQ
-        // await matchingPricingService.SetDriverAvailabilityAsync(
-        //     driverUuid,
-        //     false,
-        //     cancellationToken);
-
+        // * Use RabbitMQ to send to MatchingPricing_Service to update driver available
         await publishEndpoint.Publish(new TripAccepted(trip.Uuid, driverUuid, DateTime.UtcNow), cancellationToken);
 
         return Ok(trip);
@@ -173,7 +123,7 @@ public sealed class DriverController(
         }, cancellationToken);
 
         sendNotificateService.RemovePendingOffer(trip.Uuid);
-        await tripMatchingService.FindAndNotifyNextDriverAsync(trip, cancellationToken);
+        await matchingPricingService.FindAndNotifyNextDriverAsync(trip, cancellationToken);
         return Ok(trip);
     }
 
@@ -189,13 +139,24 @@ public sealed class DriverController(
             throw new InvalidOperationException("Chuyến đi chưa sẵn sàng đón khách.");
         }
 
+        var driverUuid = trip.DriverUuid!.Value;
+        var updatedAt = DateTime.UtcNow;
         trip.Status = TripStatus.PickedUp;
-        var location = await matchingPricingService.UpdateDriverLocationAsync(
-            trip.DriverUuid!.Value,
-            new UpdateDriverLocationContract(trip.PickupLatitude, trip.PickupLongitude),
-            cancellationToken);
+        trip.DriverLatitude = trip.PickupLatitude;
+        trip.DriverLongitude = trip.PickupLongitude;
+        trip.DriverLocationUpdatedAt = updatedAt;
         await tripService.UpdateTripAsync(trip, cancellationToken);
-        return Ok(await MapDetailsAsync(trip, cancellationToken, location));
+
+        await publishEndpoint.Publish(
+            new TripDriverLocationUpdated(
+                TripUuid: trip.Uuid,
+                DriverUuid: driverUuid,
+                Longitude: trip.PickupLongitude,
+                Latitude: trip.PickupLatitude,
+                UpdatedAt: updatedAt),
+            cancellationToken);
+
+        return Ok(await MapDetailsAsync(trip, cancellationToken));
     }
 
     // ! [Driver] - Drop off rider
@@ -210,33 +171,38 @@ public sealed class DriverController(
             throw new InvalidOperationException("Cần đón khách trước khi kết thúc chuyến.");
         }
 
+        var driverUuid = trip.DriverUuid!.Value;
+        var updatedAt = DateTime.UtcNow;
         trip.Status = TripStatus.DroppedOff;
-
-        var location = await matchingPricingService.UpdateDriverLocationAsync(
-            trip.DriverUuid!.Value,
-            new UpdateDriverLocationContract(trip.DestinationLatitude, trip.DestinationLongitude),
-            cancellationToken);
-
-        // Persist DroppedOff before publishing so a fast payment consumer cannot be
-        // overwritten by this request with stale trip data.
+        trip.DriverLatitude = trip.DestinationLatitude;
+        trip.DriverLongitude = trip.DestinationLongitude;
+        trip.DriverLocationUpdatedAt = updatedAt;
         await tripService.UpdateTripAsync(trip, cancellationToken);
 
-        // * Use RabbitMQ
-        // await publishEndpoint.Publish(new DriverLocation(trip.DriverUuid.Value, trip.DestinationLatitude, trip.DestinationLongitude), cancellationToken);
-        await publishEndpoint.Publish(new TripDropoffed(trip.DriverUuid.Value), cancellationToken);
+        await publishEndpoint.Publish(
+            new TripDriverLocationUpdated(
+                TripUuid: trip.Uuid,
+                DriverUuid: driverUuid,
+                Longitude: trip.DestinationLongitude,
+                Latitude: trip.DestinationLatitude,
+                UpdatedAt: updatedAt),
+            cancellationToken);
+
+        // * Use RabbitMQ to send to MatchingPricing_Service to update driver available
+        await publishEndpoint.Publish(
+            new TripDroppedOff(trip.Uuid, driverUuid, updatedAt),
+            cancellationToken);
+        
+        // * Use RabbitMQ to send to Payment_Service to create payment record
         await publishEndpoint.Publish(
             new RideCompleted(
                 trip.Uuid,
                 trip.RiderUuid,
-                trip.DriverUuid.Value,
+                driverUuid,
                 trip.Price ?? throw new InvalidOperationException("Chuyến đi chưa có giá.")),
             cancellationToken);
-        // await matchingPricingService.SetDriverAvailabilityAsync(
-        //     trip.DriverUuid.Value,
-        //     true,
-        //     cancellationToken);
 
-        return Ok(await MapDetailsAsync(trip, cancellationToken, location));
+        return Ok(await MapDetailsAsync(trip, cancellationToken));
     }
 
     private async Task<Trip> GetAssignedDriverTripAsync(
@@ -282,13 +248,11 @@ public sealed class DriverController(
 
     private async Task<TripResponseContract> MapDetailsAsync(
         Trip trip,
-        CancellationToken cancellationToken,
-        DriverLocationContract? driverLocation = null)
+        CancellationToken cancellationToken)
     {
         TripDriverContract? driverView = null;
         if (trip.DriverUuid is { } driverUuid)
         {
-            driverLocation ??= await matchingPricingService.GetDriverLocationAsync(driverUuid, cancellationToken);
             var profile = await driverRepository.FindByUuidAsync(driverUuid, cancellationToken);
             if (profile is not null)
             {
@@ -330,8 +294,9 @@ public sealed class DriverController(
             DurationMin = trip.DurationMin,
             Price = trip.Price,
             Status = trip.Status.ToString(),
-            DriverLatitude = driverLocation?.Latitude,
-            DriverLongitude = driverLocation?.Longitude,
+            DriverLatitude = trip.DriverLatitude,
+            DriverLongitude = trip.DriverLongitude,
+            DriverLocationUpdatedAt = trip.DriverLocationUpdatedAt,
             Driver = driverView,
             Geometry = coordinates is null ? null : new TripRouteContract { Coordinates = coordinates },
             CreatedAt = trip.CreatedAt,

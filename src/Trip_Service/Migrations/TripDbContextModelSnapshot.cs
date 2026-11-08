@@ -207,6 +207,15 @@ namespace Trip_Service.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("decimal(10,2)");
 
+                    b.Property<double?>("DriverLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime?>("DriverLocationUpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<double?>("DriverLongitude")
+                        .HasColumnType("float");
+
                     b.Property<Guid?>("DriverUuid")
                         .HasColumnType("uniqueidentifier");
 

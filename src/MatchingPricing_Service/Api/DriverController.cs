@@ -29,20 +29,6 @@ public sealed class DriverLocationController(IDriverLocationService service) : C
         return location is null ? NotFound() : Ok(location);
     }
 
-    // * Update driver location
-    // * Save driver location -> Send socket to Rider
-    // ! Used in TripService
-    [HttpPut("{driverUuid:guid}/location")]
-    public async Task<ActionResult<DriverLocationResponse>> UpdateLocationAsync(
-        Guid driverUuid,
-        UpdateDriverLocationRequest request,
-        CancellationToken cancellationToken)
-    {
-        var location = await service.UpdateLocationAsync(
-            driverUuid, request, cancellationToken);
-        return Ok(location);
-    }
-
     // ! Parse access_token
     private Guid? GetDriverUuidFromHeader()
     {

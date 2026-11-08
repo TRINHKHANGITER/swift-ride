@@ -1,12 +1,12 @@
 using MassTransit;
 using MatchingPricing_Service.Application.Services.Impl;
-using MatchingPricing_Service.Infrastructure.RabbitMQ.Message;
+using SwiftRide.Contracts.Events;
 
 namespace MatchingPricing_Service.Infrastructure.RabbitMQ;
 
-public sealed class TripDropedOffConsumer(IDriverLocationService driverLocationService) : IConsumer<TripDropedOff>
+public sealed class TripDroppedOffConsumer(IDriverLocationService driverLocationService) : IConsumer<TripDroppedOff>
 {
-    public async Task Consume(ConsumeContext<TripDropedOff> context)
+    public async Task Consume(ConsumeContext<TripDroppedOff> context)
     {
         var message = context.Message;
 

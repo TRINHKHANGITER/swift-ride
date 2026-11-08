@@ -2,18 +2,18 @@
 
 ## Tổng quan
 
-Trong `src` có **30 API nghiệp vụ**, được tính theo số action HTTP trong các controller:
+Trong `src` có **28 API nghiệp vụ**, được tính theo số action HTTP trong các controller:
 
 | Service | Số API | Đường dẫn truy cập |
 |---|---:|---|
-| Trip Service | 22 | Qua Gateway: `/ts/...` |
-| Matching & Pricing Service | 4 | Qua Gateway: `/mp/...` |
+| Trip Service | 21 | Qua Gateway: `/ts/...` |
+| Matching & Pricing Service | 3 | Qua Gateway: `/mp/...` |
 | Payment Service | 4 | Qua Gateway: `/pm/...` |
-| **Tổng** | **30** | |
+| **Tổng** | **28** | |
 
 Ngoài ra, API Gateway có `GET /` trả về `Hello World!` để kiểm tra Gateway đang chạy. Endpoint này không được tính là API nghiệp vụ.
 
-> Lưu ý: 2 API vị trí tài xế của Matching & Pricing Service cùng hỗ trợ cả tiền tố `/driver` và `/drivers`. Vì vậy có **32 URL nghiệp vụ thực tế**, nhưng chỉ có **30 action API**. Các endpoint OpenAPI chỉ xuất hiện trong môi trường Development và không được tính.
+> Lưu ý: API đọc vị trí tài xế của Matching & Pricing Service hỗ trợ cả tiền tố `/driver` và `/drivers`. Vì vậy có **29 URL nghiệp vụ thực tế**, nhưng chỉ có **28 action API**. Các endpoint OpenAPI chỉ xuất hiện trong môi trường Development và không được tính.
 
 ## Quy ước
 
@@ -21,7 +21,7 @@ Ngoài ra, API Gateway có `GET /` trả về `Hello World!` để kiểm tra Ga
 - `JWT`: gửi access token qua header `Authorization: Bearer <token>`.
 - `{...}`: tham số động trên URL.
 
-## 1. Trip Service — 22 API
+## 1. Trip Service — 21 API
 
 Base URL qua Gateway: `http://localhost:8000/ts`
 
@@ -51,23 +51,22 @@ Base URL qua Gateway: `http://localhost:8000/ts`
 
 | # | Method | Endpoint | Quyền | Ý nghĩa |
 |---:|---|---|---|---|
-| 13 | `GET` | `/driver/{driverUuid}` | JWT | Lấy hồ sơ, phương tiện và vị trí hiện tại của tài xế. |
-| 14 | `PATCH` | `/driver/{driverUuid}/online` | JWT | Cập nhật trạng thái online/offline của chính tài xế. |
-| 15 | `POST` | `/driver/trip/{tripUuid}/accept` | JWT | Tài xế chấp nhận đề nghị chuyến đi. |
-| 16 | `POST` | `/driver/trip/{tripUuid}/reject` | JWT | Tài xế từ chối đề nghị và hệ thống tìm tài xế tiếp theo. |
-| 17 | `POST` | `/driver/trip/{tripUuid}/pickup` | JWT | Xác nhận đã đón hành khách. |
-| 18 | `POST` | `/driver/trip/{tripUuid}/dropoff` | JWT | Xác nhận trả khách và phát sự kiện tạo thanh toán. |
-| 19 | `GET` | `/drivers/notifications/stream` | JWT | Mở luồng SSE nhận đề nghị chuyến đi theo thời gian thực. |
-| 20 | `GET` | `/driver/history` | JWT | Lấy lịch sử các chuyến đã trả khách của tài xế hiện tại. |
+| 13 | `PATCH` | `/driver/{driverUuid}/online` | JWT | Cập nhật trạng thái online/offline của chính tài xế. |
+| 14 | `POST` | `/driver/trip/{tripUuid}/accept` | JWT | Tài xế chấp nhận đề nghị chuyến đi. |
+| 15 | `POST` | `/driver/trip/{tripUuid}/reject` | JWT | Tài xế từ chối đề nghị và hệ thống tìm tài xế tiếp theo. |
+| 16 | `POST` | `/driver/trip/{tripUuid}/pickup` | JWT | Xác nhận đã đón hành khách. |
+| 17 | `POST` | `/driver/trip/{tripUuid}/dropoff` | JWT | Xác nhận trả khách và phát sự kiện tạo thanh toán. |
+| 18 | `GET` | `/drivers/notifications/stream` | JWT | Mở luồng SSE nhận đề nghị chuyến đi theo thời gian thực. |
+| 19 | `GET` | `/driver/history` | JWT | Lấy lịch sử các chuyến đã trả khách của tài xế hiện tại. |
 
 ### Thanh toán
 
 | # | Method | Endpoint | Quyền | Ý nghĩa |
 |---:|---|---|---|---|
-| 21 | `GET` | `/payments` | JWT | Lấy danh sách hóa đơn của hành khách hiện tại từ Payment Service. |
-| 22 | `GET` | `/payments/driver` | JWT | Lấy danh sách hóa đơn và thu nhập của tài xế hiện tại. |
+| 20 | `GET` | `/payments` | JWT | Lấy danh sách hóa đơn của hành khách hiện tại từ Payment Service. |
+| 21 | `GET` | `/payments/driver` | JWT | Lấy danh sách hóa đơn và thu nhập của tài xế hiện tại. |
 
-## 2. Matching & Pricing Service — 4 API
+## 2. Matching & Pricing Service — 3 API
 
 Base URL qua Gateway: `http://localhost:8000/mp`
 
@@ -76,7 +75,6 @@ Base URL qua Gateway: `http://localhost:8000/mp`
 | 1 | `POST` | `/matching` | Công khai | Tìm tài xế phù hợp ở gần điểm đón. |
 | 2 | `POST` | `/quote` | Công khai | Tính quãng đường, thời gian, giá và hình học tuyến đường. |
 | 3 | `GET` | `/driver/{driverUuid}/location` | Công khai | Lấy vị trí và trạng thái của tài xế. Cũng nhận `/drivers/{driverUuid}/location`. |
-| 4 | `PUT` | `/driver/{driverUuid}/location` | Công khai | Cập nhật vị trí tài xế. Cũng nhận `/drivers/{driverUuid}/location`. |
 
 ## 3. Payment Service — 4 API
 

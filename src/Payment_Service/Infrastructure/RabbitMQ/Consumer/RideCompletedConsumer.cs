@@ -1,7 +1,7 @@
 using MassTransit;
 using Payment_Service.Domain;
 using Payment_Service.Infrastructure.Persistence.Impl;
-using SwiftRide.Contracts.Payment;
+using SwiftRide.Contracts.Events;
 
 namespace Payment_Service.Infrastructure.RabbitMQ.Consumer;
 

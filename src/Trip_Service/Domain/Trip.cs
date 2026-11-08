@@ -49,6 +49,9 @@ public sealed class Trip
     public decimal? DurationMin { get; set; }
     public decimal? Price { get; set; }
     public string? RouteGeometryJson { get; set; }
+    public double? DriverLatitude { get; set; }
+    public double? DriverLongitude { get; set; }
+    public DateTime? DriverLocationUpdatedAt { get; set; }
 
     // Trip status and timestamps
     public TripStatus Status { get; set; } = TripStatus.Requested;

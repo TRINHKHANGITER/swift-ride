@@ -47,7 +47,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-swiftride}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-SwiftRidePostgres123}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -118,6 +118,12 @@ services:
       MongoDB__ConnectionString: mongodb://${MONGO_USERNAME:-swiftride}:${MONGO_PASSWORD:-SwiftRideMongo123}@mongodb:27017/?authSource=admin
       MongoDB__DatabaseName: swiftride-matching-pricing-service
       Matching__MaxDistanceMeters: "5000"
+      Pricing__PricePerKilometer: "5000"
+      Pricing__PricePerMinute: "500"
+      Pricing__Toll: "0"
+      Pricing__TaxRate: "0"
+      Pricing__NormalMultiplier: "1.0"
+      Pricing__RainMultiplier: "1.2"
       RabbitMq__Host: rabbitmq
       RabbitMq__Username: ${RABBITMQ_USERNAME:-swiftride}
       RabbitMq__Password: ${RABBITMQ_PASSWORD:-SwiftRideRabbit123}

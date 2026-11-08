@@ -1,6 +1,14 @@
+using MatchingPricing_Service.Domain;
+
 namespace MatchingPricing_Service.Application.Services.Impl;
 
 public interface IPricingService
 {
-    public decimal ProcessPrice (double distance, double time, double promotePercent);
+    decimal ProcessPrice(
+        double distanceKilometers,
+        double durationMinutes,
+        WeatherCondition weatherCondition,
+        decimal promotionMultiplier = 1);
+
+    decimal GetMultiplier(WeatherCondition weatherCondition);
 }

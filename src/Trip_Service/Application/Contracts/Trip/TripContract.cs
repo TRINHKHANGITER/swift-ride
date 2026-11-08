@@ -19,6 +19,7 @@ public sealed class TripResponseContract
     public required string Status { get; init; }
     public double? DriverLatitude { get; init; }
     public double? DriverLongitude { get; init; }
+    public DateTime? DriverLocationUpdatedAt { get; init; }
     public TripDriverContract? Driver { get; init; }
     public TripRouteContract? Geometry { get; init; }
     public DateTime CreatedAt { get; init; }

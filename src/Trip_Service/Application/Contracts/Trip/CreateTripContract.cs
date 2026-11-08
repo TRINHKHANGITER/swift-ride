@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using Trip_Service.Application.Contracts;
 
 namespace Trip_Service.Application.Contracts.Trip;
 
@@ -21,6 +23,9 @@ public sealed class CreateTripRequestContract
 
     [Required]
     public GeoLocationContract Destination { get; set; } = null!;
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public WeatherCondition WeatherCondition { get; set; } = WeatherCondition.Normal;
 }
 
 public sealed class CreateTripLocationContract

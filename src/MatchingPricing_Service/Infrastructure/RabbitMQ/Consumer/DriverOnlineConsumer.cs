@@ -1,6 +1,6 @@
 using MassTransit;
 using MatchingPricing_Service.Application.Services.Impl;
-using MatchingPricing_Service.Infrastructure.RabbitMQ.Message;
+using SwiftRide.Contracts.Events;
 
 namespace MatchingPricing_Service.Infrastructure.RabbitMQ;
 
