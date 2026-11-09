@@ -144,14 +144,14 @@ public sealed class DriverController(
         trip.Status = TripStatus.PickedUp;
         await tripService.UpdateTripAsync(trip, cancellationToken);
 
-        await publishEndpoint.Publish(
-            new TripDriverLocationUpdated(
-                TripUuid: trip.Uuid,
-                DriverUuid: driverUuid,
-                Longitude: trip.PickupLongitude,
-                Latitude: trip.PickupLatitude,
-                UpdatedAt: updatedAt),
-            cancellationToken);
+        // await publishEndpoint.Publish(
+        //     new TripDriverLocationUpdated(
+        //         TripUuid: trip.Uuid,
+        //         DriverUuid: driverUuid,
+        //         Longitude: trip.PickupLongitude,
+        //         Latitude: trip.PickupLatitude,
+        //         UpdatedAt: updatedAt),
+        //     cancellationToken);
 
         return Ok(await MapDetailsAsync(trip, cancellationToken));
     }
@@ -173,14 +173,14 @@ public sealed class DriverController(
         trip.Status = TripStatus.DroppedOff;
         await tripService.UpdateTripAsync(trip, cancellationToken);
 
-        await publishEndpoint.Publish(
-            new TripDriverLocationUpdated(
-                TripUuid: trip.Uuid,
-                DriverUuid: driverUuid,
-                Longitude: trip.DestinationLongitude,
-                Latitude: trip.DestinationLatitude,
-                UpdatedAt: updatedAt),
-            cancellationToken);
+        // await publishEndpoint.Publish(
+        //     new TripDriverLocationUpdated(
+        //         TripUuid: trip.Uuid,
+        //         DriverUuid: driverUuid,
+        //         Longitude: trip.DestinationLongitude,
+        //         Latitude: trip.DestinationLatitude,
+        //         UpdatedAt: updatedAt),
+        //     cancellationToken);
 
         // * Use RabbitMQ to send to MatchingPricing_Service to update driver available
         await publishEndpoint.Publish(
