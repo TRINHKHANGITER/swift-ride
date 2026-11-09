@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://livable-elsewhere-elyse.ngrok-free.dev";
 
 export const httpClient = axios.create({
   baseURL: API_BASE_URL,
