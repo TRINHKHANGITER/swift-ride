@@ -104,12 +104,6 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
   }, [router, status]);
   const current = simulatedLocation ?? (trip && trip.driverLatitude !== null && trip.driverLongitude !== null
     ? { latitude: trip.driverLatitude, longitude: trip.driverLongitude } : null);
-  const operationTarget = trip ? (isCarryingPassenger
-    ? { latitude: trip.destinationLatitude, longitude: trip.destinationLongitude }
-    : { latitude: trip.pickupLatitude, longitude: trip.pickupLongitude }) : null;
-  const isAtOperationTarget = current && operationTarget
-    ? distanceMeters(current.latitude, current.longitude, operationTarget.latitude, operationTarget.longitude) < 80
-    : false;
 
   const moveDriverTo = async (target: { latitude: number; longitude: number } | null) => {
     if (!trip || !current || !target || busy) return;
@@ -137,7 +131,7 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
   }, []);
 
   const advanceTrip = async () => {
-    if (!trip || busy || !isAtOperationTarget) return;
+    if (!trip || busy) return;
     setBusy(true); setError("");
     try {
       if (isCarryingPassenger) {
@@ -218,10 +212,9 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
               </div>
               <div className="mt-4 border-t border-[#edf0ee] pt-4">
                 <p className="text-xs font-medium text-[#71807a]">Thao tác chuyến đi</p>
-                <Button className="mt-2 h-12 w-full rounded-xl bg-[#126b4f] hover:bg-[#0e5942]" disabled={busy || !isAtOperationTarget} onClick={() => void advanceTrip()}>
+                <Button className="mt-2 h-12 w-full rounded-xl bg-[#126b4f] hover:bg-[#0e5942]" disabled={busy} onClick={() => void advanceTrip()}>
                   {busy && <LoaderCircle className="animate-spin" />}{isCarryingPassenger ? "Trả khách" : "Đón khách"}
                 </Button>
-                {!isAtOperationTarget && <p className="mt-2 text-center text-[11px] text-[#8a5b35]">Cần di chuyển tới {isCarryingPassenger ? "điểm trả" : "điểm đón"} trước.</p>}
                 {canCancel && (
                   <Button variant="outline" className="mt-3 h-11 w-full rounded-xl border-[#d26a50] text-[#a34b35] hover:bg-[#fff0ec] hover:text-[#8f3f2c]" disabled={busy || isCancelling} onClick={() => void cancelTrip()}>
                     {isCancelling ? <LoaderCircle className="size-5 animate-spin" /> : <X className="size-5" />}

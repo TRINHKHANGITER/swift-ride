@@ -9,6 +9,7 @@ public sealed class PaymentDBContext : DbContext
 
 
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -21,5 +22,15 @@ public sealed class PaymentDBContext : DbContext
                 .IsUnique();
         });
 
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasIndex(transaction => transaction.ReferenceCode)
+                .IsUnique();
+
+            entity.HasOne(transaction => transaction.Payment)
+                .WithMany(payment => payment.Transactions)
+                .HasForeignKey(transaction => transaction.PaymentUuid)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

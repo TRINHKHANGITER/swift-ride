@@ -4,7 +4,7 @@ namespace Payment_Service.Domain;
 
 public enum PaymentStatus
 {
-    Pending, Settled, Failed, Refunded
+    Pending, Settled
 }
 
 public class Payment
@@ -18,4 +18,5 @@ public class Payment
     public string QrUrl { get; set; } = string.Empty;
     public string TransferCode { get; set; } = string.Empty;
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
+    public ICollection<PaymentTransaction> Transactions { get; set; } = [];
 }

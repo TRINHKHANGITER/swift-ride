@@ -56,6 +56,7 @@ export function SearchScreen() {
 
   // Location search state
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestSearchRequest = useRef(0);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<LocationOption[]>([]);
 
@@ -65,7 +66,9 @@ export function SearchScreen() {
     }).catch(() => undefined);
   }, [router]);
   const visibleLocations =
-    isPickupMode && searchQuery.trim() === "" ? locations.slice(0, 5) : searchResults && locations.slice(0, 5);
+    searchQuery.trim() === ""
+      ? locations.slice(0, 5)
+      : searchResults;
 
   const startPickupSearch = () => {
     setSearchQuery("");
@@ -88,6 +91,8 @@ export function SearchScreen() {
   };
 
   useEffect(() => {
+    const requestId = ++latestSearchRequest.current;
+
     if (searchTimer.current) {
       clearTimeout(searchTimer.current);
     }
@@ -101,7 +106,9 @@ export function SearchScreen() {
       await execute(
         async () => {
           const results = await _searchLocation.searchLocation(searchQuery);
-          setSearchResults(results);
+          if (requestId === latestSearchRequest.current) {
+            setSearchResults(results);
+          }
         },
         {
           onError: (error) => {
@@ -228,7 +235,7 @@ export function SearchScreen() {
               id="search-results-title"
               className="text-xl font-bold text-[#17211e]"
             >
-              {isPickupMode && searchQuery.trim() === ""
+              {searchQuery.trim() === ""
                 ? "Địa điểm gợi ý"
                 : "Kết quả tìm kiếm"}
             </h2>

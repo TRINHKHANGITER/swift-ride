@@ -61,6 +61,49 @@ namespace Payment_Service.Migrations
 
                     b.ToTable("Payments");
                 });
+
+            modelBuilder.Entity("Payment_Service.Domain.PaymentTransaction", b =>
+                {
+                    b.Property<Guid>("Uuid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<Guid>("PaymentUuid")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReferenceCode")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Uuid");
+
+                    b.HasIndex("PaymentUuid");
+
+                    b.HasIndex("ReferenceCode")
+                        .IsUnique();
+
+                    b.ToTable("PaymentTransactions");
+                });
+
+            modelBuilder.Entity("Payment_Service.Domain.PaymentTransaction", b =>
+                {
+                    b.HasOne("Payment_Service.Domain.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentUuid")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+                });
 #pragma warning restore 612, 618
         }
     }

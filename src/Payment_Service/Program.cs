@@ -1,5 +1,7 @@
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
+using Payment_Service.Application.Services;
+using Payment_Service.Application.Services.Impl;
 using Payment_Service.Infrastructure;
 using Payment_Service.Infrastructure.Persistence;
 using Payment_Service.Infrastructure.Persistence.Impl;
@@ -15,6 +17,9 @@ builder.Services.AddControllers();
 // Database
 builder.Services.AddDbContext<PaymentDBContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IPaymentTransactionRepository, PaymentTransactionRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPaymentTransactionService, PaymentTransactionService>();
 
 builder.Services.AddMassTransit(x =>
 {
