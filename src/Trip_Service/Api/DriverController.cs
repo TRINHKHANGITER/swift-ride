@@ -52,7 +52,7 @@ public sealed class DriverController(
     [HttpPatch("{driverUuid:guid}/online")]
     public async Task<IActionResult> UpdateOnlineStatusAsync(
         [FromRoute] Guid driverUuid,
-        DriverUpdateStatusContract contract,
+        UpdateDriverStatusContract contract,
         CancellationToken cancellationToken)
     {
         var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
@@ -142,9 +142,6 @@ public sealed class DriverController(
         var driverUuid = trip.DriverUuid!.Value;
         var updatedAt = DateTime.UtcNow;
         trip.Status = TripStatus.PickedUp;
-        trip.DriverLatitude = trip.PickupLatitude;
-        trip.DriverLongitude = trip.PickupLongitude;
-        trip.DriverLocationUpdatedAt = updatedAt;
         await tripService.UpdateTripAsync(trip, cancellationToken);
 
         await publishEndpoint.Publish(
@@ -174,9 +171,6 @@ public sealed class DriverController(
         var driverUuid = trip.DriverUuid!.Value;
         var updatedAt = DateTime.UtcNow;
         trip.Status = TripStatus.DroppedOff;
-        trip.DriverLatitude = trip.DestinationLatitude;
-        trip.DriverLongitude = trip.DestinationLongitude;
-        trip.DriverLocationUpdatedAt = updatedAt;
         await tripService.UpdateTripAsync(trip, cancellationToken);
 
         await publishEndpoint.Publish(
@@ -251,8 +245,10 @@ public sealed class DriverController(
         CancellationToken cancellationToken)
     {
         TripDriverContract? driverView = null;
+        DriverLocationResponseContract? driverLocation = null;
         if (trip.DriverUuid is { } driverUuid)
         {
+            driverLocation = await matchingPricingService.GetDriverLocation(driverUuid, cancellationToken);
             var profile = await driverRepository.FindByUuidAsync(driverUuid, cancellationToken);
             if (profile is not null)
             {
@@ -294,9 +290,9 @@ public sealed class DriverController(
             DurationMin = trip.DurationMin,
             Price = trip.Price,
             Status = trip.Status.ToString(),
-            DriverLatitude = trip.DriverLatitude,
-            DriverLongitude = trip.DriverLongitude,
-            DriverLocationUpdatedAt = trip.DriverLocationUpdatedAt,
+            DriverLatitude = driverLocation?.Latitude,
+            DriverLongitude = driverLocation?.Longitude,
+            DriverLocationUpdatedAt = driverLocation?.UpdatedAt,
             Driver = driverView,
             Geometry = coordinates is null ? null : new TripRouteContract { Coordinates = coordinates },
             CreatedAt = trip.CreatedAt,

@@ -1,6 +1,6 @@
 namespace Trip_Service.Application.Contracts.Driver;
 
-public class DriverUpdateStatusContract
+public class UpdateDriverStatusContract
 {
     public bool IsOnline { get; set; }
 }

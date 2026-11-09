@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SwiftRide.Contracts.Events;
 using Trip_Service.Application.Contracts;
+using Trip_Service.Application.Contracts.Driver;
 using Trip_Service.Application.Contracts.Trip;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
@@ -73,7 +74,8 @@ public sealed class TripController(
     {
         var trip = await tripService.GetTripByUuidAsync(tripUuid, cancellationToken);
         var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
-        var isAssignedDriver = session.Profile?.DriverUuid == trip.DriverUuid;
+        var isAssignedDriver = trip.DriverUuid is { } driverUuid &&
+                               session.Profile?.DriverUuid == driverUuid;
 
         if (trip.RiderUuid != session.Account.Uuid && !isAssignedDriver)
         {
@@ -143,7 +145,7 @@ public sealed class TripController(
         return Ok(match);
     }
 
-    // ! [Rider] - Cancel a trip while waiting for a driver
+    // ! [Rider/Driver] - Cancel before picking up the rider
     [Authorize]
     [HttpPost("{tripUuid:guid}/cancel")]
     public async Task<ActionResult<TripResponseContract>> CancelTripAsync(
@@ -151,20 +153,31 @@ public sealed class TripController(
         CancellationToken cancellationToken)
     {
         var trip = await tripService.GetTripByUuidAsync(tripUuid, cancellationToken);
-        if (trip.RiderUuid != GetAccountUuid())
+        var session = await authService.AboutMeAsync(GetAccountUuid(), cancellationToken);
+        var isRider = trip.RiderUuid == session.Account.Uuid;
+        var isAssignedDriver = trip.DriverUuid is { } assignedDriverUuid &&
+                               session.Profile?.DriverUuid == assignedDriverUuid;
+        if (!isRider && !isAssignedDriver)
         {
             return Forbid();
         }
 
-        if (trip.Status != TripStatus.Requested)
+        if (trip.Status is not (TripStatus.Requested or TripStatus.DriverAccepted or TripStatus.EnRoute))
         {
-            throw new InvalidOperationException("Chỉ có thể hủy chuyến đi đang chờ tài xế.");
+            throw new InvalidOperationException("Không thể hủy chuyến sau khi tài xế đã đón khách.");
         }
 
+        var driverUuid = trip.DriverUuid;
         trip.Status = TripStatus.Cancelled;
-        trip.DriverUuid = null;
         await tripService.UpdateTripAsync(trip, cancellationToken);
         sendNotificateService.RemovePendingOffer(trip.Uuid);
+
+        if (driverUuid is { } cancelledDriverUuid)
+        {
+            await publishEndpoint.Publish(
+                new TripCancelled(trip.Uuid, cancelledDriverUuid, DateTime.UtcNow),
+                cancellationToken);
+        }
 
         return Ok(await MapDetailsAsync(trip, cancellationToken));
     }
@@ -191,10 +204,12 @@ public sealed class TripController(
 
         var driverUuid = trip.DriverUuid!.Value;
         var updatedAt = DateTime.UtcNow;
-        if (trip.Status == TripStatus.DriverAccepted) trip.Status = TripStatus.EnRoute;
-        trip.DriverLatitude = request.Latitude;
-        trip.DriverLongitude = request.Longitude;
-        trip.DriverLocationUpdatedAt = updatedAt;
+
+        if (trip.Status == TripStatus.DriverAccepted)
+        {
+            trip.Status = TripStatus.EnRoute;
+        }
+
         await tripService.UpdateTripAsync(trip, cancellationToken);
 
         await publishEndpoint.Publish(
@@ -238,8 +253,10 @@ public sealed class TripController(
         CancellationToken cancellationToken)
     {
         TripDriverContract? driverView = null;
+        DriverLocationResponseContract? driverLocation = null;
         if (trip.DriverUuid is { } driverUuid)
         {
+            driverLocation = await matchingPricingClient.GetDriverLocation(driverUuid, cancellationToken);
             var profile = await driverRepository.FindByUuidAsync(driverUuid, cancellationToken);
             if (profile is not null)
             {
@@ -281,9 +298,9 @@ public sealed class TripController(
             DurationMin = trip.DurationMin,
             Price = trip.Price,
             Status = trip.Status.ToString(),
-            DriverLatitude = trip.DriverLatitude,
-            DriverLongitude = trip.DriverLongitude,
-            DriverLocationUpdatedAt = trip.DriverLocationUpdatedAt,
+            DriverLatitude = driverLocation?.Latitude,
+            DriverLongitude = driverLocation?.Longitude,
+            DriverLocationUpdatedAt = driverLocation?.UpdatedAt,
             Driver = driverView,
             Geometry = coordinates is null ? null : new TripRouteContract { Coordinates = coordinates },
             CreatedAt = trip.CreatedAt,

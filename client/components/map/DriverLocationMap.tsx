@@ -3,6 +3,7 @@
 import { Map, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef } from "react";
+import { drawClientLocation } from "./util/driver-point";
 
 type DriverLocationMapProps = {
   latitude: number;
@@ -32,6 +33,7 @@ export default function DriverLocationMap({ latitude, longitude }: DriverLocatio
     });
 
     mapRef.current = map;
+    drawClientLocation(map, initialLocation);
 
     return () => {
       mapRef.current = null;
@@ -40,7 +42,12 @@ export default function DriverLocationMap({ latitude, longitude }: DriverLocatio
   }, []);
 
   useEffect(() => {
-    mapRef.current?.easeTo({ center: [longitude, latitude], duration: 500 });
+    const map = mapRef.current;
+    if (!map) return;
+
+    const location = { latitude, longitude };
+    drawClientLocation(map, location);
+    map.easeTo({ center: [longitude, latitude], duration: 500 });
   }, [latitude, longitude]);
 
   return (

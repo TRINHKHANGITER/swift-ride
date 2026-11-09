@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using Trip_Service.Application.Contracts;
+using Trip_Service.Application.Contracts.Driver;
 using Trip_Service.Application.Services.Impl;
 using Trip_Service.Domain;
 using Trip_Service.Infrastructure.Persistence.Impl;
@@ -25,7 +26,7 @@ public sealed class MatchingPricingService(
             ?? throw new InvalidOperationException("MatchingPricingService trả về dữ liệu rỗng.");
     }
 
-    // * Handle find available driver
+    // * Handle find first available driver
     public async Task<MatchingResponseContract> ProcessMatchAsync(
         MatchingRequestContract contract,
         CancellationToken cancellationToken = default)
@@ -35,6 +36,16 @@ public sealed class MatchingPricingService(
 
         return await response.Content.ReadFromJsonAsync<MatchingResponseContract>(cancellationToken)
             ?? throw new InvalidOperationException("MatchingPricingService trả về dữ liệu rỗng.");
+    }
+
+    // * Get driver location
+    public async Task<DriverLocationResponseContract?> GetDriverLocation(Guid driverUuid, CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync($"mp/driver/{driverUuid}/location", cancellationToken);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<DriverLocationResponseContract>(cancellationToken);
     }
 
     // * When driver reject the trip, find next driver

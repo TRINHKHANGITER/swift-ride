@@ -90,6 +90,7 @@ builder.Services.AddHttpClient<IOSRMService, OSRMService>(client =>
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<TripAcceptedConsumer>();
+    x.AddConsumer<TripCancelledConsumer>();
     x.AddConsumer<TripDroppedOffConsumer>();
     x.AddConsumer<DriverOnlineConsumer>();
     x.AddConsumer<TripDriverLocationUpdatedConsumer>();

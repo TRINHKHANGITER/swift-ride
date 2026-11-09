@@ -1,6 +1,6 @@
 namespace MatchingPricing_Service.Application.Contracts;
 
-public sealed record DriverLocationResponse(
+public sealed record DriverLocationResponseContract(
     Guid DriverUuid,
     double Latitude,
     double Longitude,

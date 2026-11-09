@@ -35,14 +35,14 @@ builder.Services.AddMassTransit(x =>
 
 var app = builder.Build();
 
-if (builder.Configuration.GetValue<bool>("Database:ApplyMigrations"))
-{
-    await using var scope = app.Services.CreateAsyncScope();
-    await scope.ServiceProvider
-        .GetRequiredService<PaymentDBContext>()
-        .Database
-        .MigrateAsync();
-}
+// if (builder.Configuration.GetValue<bool>("Database:ApplyMigrations"))
+// {
+//     await using var scope = app.Services.CreateAsyncScope();
+//     await scope.ServiceProvider
+//         .GetRequiredService<PaymentDBContext>()
+//         .Database
+//         .MigrateAsync();
+// }
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -4,11 +4,11 @@ namespace MatchingPricing_Service.Application.Services.Impl;
 
 public interface IDriverLocationService
 {
-    Task<DriverLocationResponse?> FindByDriverUuidAsync(
+    Task<DriverLocationResponseContract?> FindByDriverUuidAsync(
         Guid driverUuid,
         CancellationToken cancellationToken);
 
-    Task<DriverLocationResponse> UpdateLocationAsync(
+    Task<DriverLocationResponseContract> UpdateLocationAsync(
         Guid driverUuid,
         double latitude,
         double longitude,

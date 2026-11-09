@@ -166,6 +166,7 @@ export function DriverFindTripsScreen() {
       async () => {
         if (nextAction === "accept") {
           await driverService.acceptTrip(tripRequest.uuid);
+          setTripRequest(null);
           window.localStorage.setItem(
             "swift-ride-active-trip",
             tripRequest.uuid,

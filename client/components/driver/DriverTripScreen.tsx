@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, LoaderCircle, MapPin, Navigation, Route } from "lucide-react";
+import { ArrowLeft, CheckCircle2, LoaderCircle, MapPin, Navigation, Route, X } from "lucide-react";
 import { DriverOnlyScreen } from "@/components/driver/DriverOnlyScreen";
 import ViewMapLine from "@/components/map/ViewMapLine";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,14 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
   const router = useRouter();
   const [trip, setTrip] = useState<TripContract | null>(null);
   const [busy, setBusy] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState("");
   const [driverAnimation, setDriverAnimation] = useState<{ key: number; coordinates: number[][]; durationMs: number } | null>(null);
   const [movementRoute, setMovementRoute] = useState<{ type: string; coordinates: number[][] } | null>(null);
-  const [movementTarget, setMovementTarget] = useState<{ latitude: number; longitude: number } | null>(null);
   const [originalLocation, setOriginalLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [simulatedLocation, setSimulatedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const previousStatusRef = useRef<string | null>(null);
+  const locationUpdateQueueRef = useRef<Promise<void>>(Promise.resolve());
   const { tripRoute, driverRoute } = useTripRoutes(trip);
 
   const loadTrip = useCallback(async () => {
@@ -57,9 +59,26 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
   }, [isTerminalStatus, loadTrip]);
 
   const isCarryingPassenger = status === "PickedUp";
+  const canCancel = status === "DriverAccepted" || status === "EnRoute";
   const isAwaitingPayment = status === "DroppedOff" || status === "PaymentPending";
   const isPaid = status === "Paid";
   const isFinished = isAwaitingPayment || isPaid;
+
+  const syncDriverLocation = useCallback((location: { latitude: number; longitude: number }) => {
+    if (!trip) return Promise.resolve();
+
+    setSimulatedLocation(location);
+    locationUpdateQueueRef.current = locationUpdateQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        await tripService.updateDriverLocation(trip.uuid, location.latitude, location.longitude);
+      })
+      .catch(() => {
+        setError("Không thể cập nhật vị trí tài xế.");
+      });
+
+    return locationUpdateQueueRef.current;
+  }, [trip]);
 
   useEffect(() => {
     if (!status) return;
@@ -78,13 +97,13 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
 
     previousStatusRef.current = status;
 
-    if (status === "Paid") {
+    if (status === "Paid" || status === "Cancelled") {
       window.localStorage.removeItem("swift-ride-active-trip");
       router.replace("/driver");
     }
   }, [router, status]);
-  const current = trip && trip.driverLatitude !== null && trip.driverLongitude !== null
-    ? { latitude: trip.driverLatitude, longitude: trip.driverLongitude } : null;
+  const current = simulatedLocation ?? (trip && trip.driverLatitude !== null && trip.driverLongitude !== null
+    ? { latitude: trip.driverLatitude, longitude: trip.driverLongitude } : null);
   const operationTarget = trip ? (isCarryingPassenger
     ? { latitude: trip.destinationLatitude, longitude: trip.destinationLongitude }
     : { latitude: trip.pickupLatitude, longitude: trip.pickupLongitude }) : null;
@@ -97,37 +116,25 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
     setBusy(true); setError("");
     try {
       if (distanceMeters(current.latitude, current.longitude, target.latitude, target.longitude) < 10) {
-        setTrip(await tripService.updateDriverLocation(trip.uuid, target.latitude, target.longitude));
+        await syncDriverLocation(target);
         setBusy(false);
         return;
       }
 
       const route = await osrmService.getRoute(current, target);
-      setMovementTarget(target);
       setMovementRoute(route);
-      setDriverAnimation({ key: Date.now(), coordinates: route.coordinates, durationMs: 5_000 });
+      setDriverAnimation({ key: Date.now(), coordinates: route.coordinates, durationMs: 15_000 });
     } catch {
       setError("Không thể bắt đầu di chuyển.");
       setBusy(false);
     }
   };
 
-  const finishMovement = useCallback(async () => {
-    if (!trip || !movementTarget) return;
-    try {
-      setTrip(await tripService.updateDriverLocation(
-        trip.uuid,
-        movementTarget.latitude,
-        movementTarget.longitude,
-      ));
-    } catch { setError("Không thể cập nhật vị trí tài xế."); }
-    finally {
-      setDriverAnimation(null);
-      setMovementRoute(null);
-      setMovementTarget(null);
-      setBusy(false);
-    }
-  }, [movementTarget, trip]);
+  const finishMovement = useCallback(() => {
+    setDriverAnimation(null);
+    setMovementRoute(null);
+    setBusy(false);
+  }, []);
 
   const advanceTrip = async () => {
     if (!trip || busy || !isAtOperationTarget) return;
@@ -141,6 +148,27 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
       }
     } catch { setError("Không thể cập nhật trạng thái chuyến đi."); }
     finally { setBusy(false); }
+  };
+
+  const cancelTrip = async () => {
+    if (!trip || !canCancel || isCancelling) return;
+    if (!window.confirm("Bạn có chắc muốn hủy chuyến đi này?")) return;
+
+    setIsCancelling(true);
+    setError("");
+    setDriverAnimation(null);
+    setMovementRoute(null);
+    try {
+      setTrip(await tripService.cancelTrip(trip.uuid));
+      window.localStorage.removeItem("swift-ride-active-trip");
+      router.replace("/driver");
+    } catch {
+      await loadTrip();
+      setError("Không thể hủy chuyến đi. Vui lòng thử lại.");
+    } finally {
+      setIsCancelling(false);
+      setBusy(false);
+    }
   };
 
   return (
@@ -163,6 +191,7 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
               driverGeometry={movementRoute ?? driverRoute}
               driverLocation={current}
               driverAnimation={driverAnimation}
+              onDriverLocationChange={syncDriverLocation}
               onDriverAnimationComplete={finishMovement}
             />
           </section>
@@ -193,6 +222,12 @@ export function DriverTripScreen({ tripUuid }: { tripUuid: string }) {
                   {busy && <LoaderCircle className="animate-spin" />}{isCarryingPassenger ? "Trả khách" : "Đón khách"}
                 </Button>
                 {!isAtOperationTarget && <p className="mt-2 text-center text-[11px] text-[#8a5b35]">Cần di chuyển tới {isCarryingPassenger ? "điểm trả" : "điểm đón"} trước.</p>}
+                {canCancel && (
+                  <Button variant="outline" className="mt-3 h-11 w-full rounded-xl border-[#d26a50] text-[#a34b35] hover:bg-[#fff0ec] hover:text-[#8f3f2c]" disabled={busy || isCancelling} onClick={() => void cancelTrip()}>
+                    {isCancelling ? <LoaderCircle className="size-5 animate-spin" /> : <X className="size-5" />}
+                    Hủy chuyến
+                  </Button>
+                )}
               </div>
             </>
           )}

@@ -12,6 +12,7 @@ interface ViewMapLineProps {
   driverGeometry?: TripGeometry;
   driverLocation?: { latitude: number; longitude: number } | null;
   driverAnimation?: { key: number; coordinates: number[][]; durationMs?: number } | null;
+  onDriverLocationChange?: (location: { latitude: number; longitude: number }) => void | Promise<void>;
   onDriverAnimationComplete?: () => void | Promise<void>;
 }
 
@@ -64,6 +65,7 @@ export default function ViewMapLine({
   driverGeometry,
   driverLocation,
   driverAnimation,
+  onDriverLocationChange,
   onDriverAnimationComplete,
 }: ViewMapLineProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +79,8 @@ export default function ViewMapLine({
   const animationFrameRef = useRef<number | null>(null);
   const animationKeyRef = useRef<number | null>(null);
   const isAnimatingRef = useRef(false);
+  const lastLocationEmissionRef = useRef(0);
+  const locationChangeRef = useRef(onDriverLocationChange);
   const animationCompleteRef = useRef(onDriverAnimationComplete);
 
   const pickupLatitude = pickup?.latitude;
@@ -94,8 +98,9 @@ export default function ViewMapLine({
   }, [tripCoordinates, driverCoordinates, driverLocation]);
 
   useEffect(() => {
+    locationChangeRef.current = onDriverLocationChange;
     animationCompleteRef.current = onDriverAnimationComplete;
-  }, [onDriverAnimationComplete]);
+  }, [onDriverAnimationComplete, onDriverLocationChange]);
 
   // ! Pickip and destination
   useEffect(() => {
@@ -244,11 +249,16 @@ export default function ViewMapLine({
       }
       const [fromLongitude, fromLatitude] = from;
       const [toLongitude, toLatitude] = to;
+      const longitude = fromLongitude + (toLongitude - fromLongitude) * segmentProgress;
+      const latitude = fromLatitude + (toLatitude - fromLatitude) * segmentProgress;
 
-      marker.setLngLat([
-        fromLongitude + (toLongitude - fromLongitude) * segmentProgress,
-        fromLatitude + (toLatitude - fromLatitude) * segmentProgress,
-      ]);
+      marker.setLngLat([longitude, latitude]);
+
+      let locationUpdate: void | Promise<void> = undefined;
+      if (now - lastLocationEmissionRef.current >= 500 || progress === 1) {
+        lastLocationEmissionRef.current = now;
+        locationUpdate = locationChangeRef.current?.({ latitude, longitude });
+      }
 
       if (progress < 1) {
         animationFrameRef.current = requestAnimationFrame(animate);
@@ -256,9 +266,11 @@ export default function ViewMapLine({
       }
 
       animationFrameRef.current = null;
-      Promise.resolve(animationCompleteRef.current?.()).finally(() => {
-        isAnimatingRef.current = false;
-      });
+      Promise.resolve(locationUpdate)
+        .then(() => animationCompleteRef.current?.())
+        .finally(() => {
+          isAnimatingRef.current = false;
+        });
     };
 
     animationFrameRef.current = requestAnimationFrame(animate);

@@ -94,7 +94,7 @@ builder.Services.AddScoped<IPasswordService, PasswordService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddSingleton<ISendNotificateService, SendNotificateService>();
 // Application service
-builder.Services.AddScoped<ITripService, TripService>();
+builder.Services.AddScoped<ITripService, global::Trip_Service.Application.Services.TripService>();
 
 // Application Repository
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();

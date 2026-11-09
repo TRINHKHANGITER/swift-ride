@@ -63,6 +63,7 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
 
   const status = trip ? tripStatusName(trip.status) : "";
   const isTerminalStatus = status === "Paid" || status === "Cancelled" || status === "Failed";
+  const canCancel = status === "Requested" || status === "DriverAccepted" || status === "EnRoute";
 
   useEffect(() => {
     if (isTerminalStatus) return;
@@ -90,7 +91,7 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
   }, [status]);
 
   const cancelTrip = async () => {
-    if (!trip || status !== "Requested" || isCancelling) return;
+    if (!trip || !canCancel || isCancelling) return;
     if (!window.confirm("Bạn có chắc muốn hủy chuyến đi này?")) return;
 
     setIsCancelling(true);
@@ -217,7 +218,7 @@ export function RiderTripScreen({ tripUuid }: { tripUuid: string }) {
               </section>
             )}
 
-            {status === "Requested" && (
+            {canCancel && (
               <section className="bg-white px-5 py-5">
                 <Button
                   type="button"

@@ -8,7 +8,7 @@ namespace MatchingPricing_Service.Application.Services;
 public sealed class DriverLocationService(IDriverLocationRepository repository)
     : IDriverLocationService
 {
-    public async Task<DriverLocationResponse?> FindByDriverUuidAsync(
+    public async Task<DriverLocationResponseContract?> FindByDriverUuidAsync(
         Guid driverUuid,
         CancellationToken cancellationToken)
     {
@@ -18,7 +18,7 @@ public sealed class DriverLocationService(IDriverLocationRepository repository)
         return location is null ? null : Map(location);
     }
 
-    public async Task<DriverLocationResponse> UpdateLocationAsync(
+    public async Task<DriverLocationResponseContract> UpdateLocationAsync(
         Guid driverUuid,
         double latitude,
         double longitude,
@@ -87,7 +87,7 @@ public sealed class DriverLocationService(IDriverLocationRepository repository)
         }
     }
 
-    private static DriverLocationResponse Map(DriverLocation location) =>
+    private static DriverLocationResponseContract Map(DriverLocation location) =>
         new(
             location.DriverUuid,
             location.Location.Coordinates.Latitude,
