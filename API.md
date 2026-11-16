@@ -1,5 +1,7 @@
 # Tổng hợp API trong `src`
 
+
+
 ## Tổng quan
 
 Trong `src` có **28 API nghiệp vụ**, được tính theo số action HTTP trong các controller:
@@ -88,6 +90,8 @@ Base URL qua Gateway: `http://localhost:8000/pm`
 | 4 | `POST` | `/payment/ipn` | Công khai | Nhận webhook SePay, xác nhận thanh toán và thông báo kết quả cho Trip Service. |
 
 ## 4. Endpoint kỹ thuật của API Gateway
+
+
 
 | Method | Endpoint | Ý nghĩa |
 |---|---|---|
